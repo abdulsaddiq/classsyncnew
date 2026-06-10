@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Flask
+instance/
+uploads/
+
+# Environment
+.env
+
+# Database
+*.db
+
+# Node
+node_modules/
+dist/
