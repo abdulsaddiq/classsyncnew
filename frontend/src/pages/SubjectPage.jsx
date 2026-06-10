@@ -70,59 +70,174 @@ function SubjectPage() {
 
     }, [id]);
 
+    const getDaysLeft = (dueDate) => {
+
+        if (!dueDate) {
+            return null;
+        }
+
+        const today = new Date();
+
+        const due = new Date(dueDate);
+
+        const diff =
+            Math.ceil(
+                (
+                    due - today
+                ) /
+                (
+                    1000 *
+                    60 *
+                    60 *
+                    24
+                )
+            );
+
+        return diff;
+    };
+
     return (
         <>
             <Navbar />
 
-            <div style={{ padding: "20px" }}>
+            <div
+                style={{
+                    padding: "20px"
+                }}
+            >
 
-                <h1>Subject</h1>
+                <h1>
+                    Subject
+                </h1>
 
-                <h2>📁 Folders</h2>
+                <h2>
+                    📁 Folders
+                </h2>
 
                 {folders.map((folder) => (
 
                     <div
                         key={folder.id}
                         style={{
-                            border: "1px solid #ddd",
-                            padding: "15px",
-                            borderRadius: "10px",
-                            marginBottom: "10px"
+                            border:
+                                "1px solid #ddd",
+                            padding:
+                                "15px",
+                            borderRadius:
+                                "10px",
+                            marginBottom:
+                                "10px"
                         }}
                     >
-                        <Link to={`/folder/${folder.id}`}>
+                        <Link
+                            to={`/folder/${folder.id}`}
+                        >
                             📁 {folder.folder_name}
                         </Link>
                     </div>
 
                 ))}
 
-                <h2>📝 Assignments</h2>
+                <h2>
+                    📝 Assignments
+                </h2>
 
-                {assignments.map((assignment) => (
+                {assignments.length === 0 ? (
 
-                    <div
-                        key={assignment.id}
-                        style={{
-                            border: "1px solid #ddd",
-                            padding: "15px",
-                            borderRadius: "10px",
-                            marginBottom: "10px"
-                        }}
-                    >
+                    <p>
+                        No assignments yet.
+                    </p>
 
-                        <h3>
-                            {assignment.title}
-                        </h3>
+                ) : (
 
-                        <p>
-                            {assignment.description}
-                        </p>
+                    assignments.map(
+                        (assignment) => {
 
-                    </div>
+                            const daysLeft =
+                                getDaysLeft(
+                                    assignment.due_date
+                                );
 
-                ))}
+                            return (
+
+                                <div
+                                    key={
+                                        assignment.id
+                                    }
+                                    style={{
+                                        border:
+                                            "1px solid #ddd",
+                                        padding:
+                                            "15px",
+                                        borderRadius:
+                                            "10px",
+                                        marginBottom:
+                                            "10px"
+                                    }}
+                                >
+
+                                    <h3>
+                                        {
+                                            assignment.title
+                                        }
+                                    </h3>
+
+                                    <p>
+                                        {
+                                            assignment.description
+                                        }
+                                    </p>
+
+                                    {assignment.due_date && (
+
+                                        <>
+                                            <p>
+                                                📅 Due:
+                                                {" "}
+                                                {
+                                                    assignment.due_date
+                                                }
+                                            </p>
+
+                                            <p>
+
+                                                {daysLeft < 0 ? (
+                                                    <span
+                                                        style={{
+                                                            color:
+                                                                "red",
+                                                            fontWeight:
+                                                                "bold"
+                                                        }}
+                                                    >
+                                                        ❌ Overdue
+                                                    </span>
+                                                ) : (
+                                                    <span
+                                                        style={{
+                                                            color:
+                                                                "green",
+                                                            fontWeight:
+                                                                "bold"
+                                                        }}
+                                                    >
+                                                        ⏳ {daysLeft} days left
+                                                    </span>
+                                                )}
+
+                                            </p>
+
+                                        </>
+
+                                    )}
+
+                                </div>
+
+                            );
+                        }
+                    )
+
+                )}
 
             </div>
         </>

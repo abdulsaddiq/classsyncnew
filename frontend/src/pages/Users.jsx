@@ -103,9 +103,10 @@ function Users() {
                 users.map((user) =>
                     user.id === userId
                         ? {
-                            ...user,
-                            role: response.data.role
-                        }
+                              ...user,
+                              role:
+                                  response.data.role
+                          }
                         : user
                 )
             );
@@ -138,97 +139,184 @@ function Users() {
         <>
             <Navbar />
 
-            <div style={{ padding: "20px" }}>
+            <div
+                style={{
+                    padding: "20px"
+                }}
+            >
 
-                <h1>Users</h1>
+                <h1>
+                    Users (
+                    {filteredUsers.length}
+                    )
+                </h1>
 
                 <input
                     type="text"
                     placeholder="Search by name or roll number"
                     value={search}
                     onChange={(e) =>
-                        setSearch(e.target.value)
+                        setSearch(
+                            e.target.value
+                        )
                     }
                     style={{
                         width: "100%",
-                        padding: "10px",
-                        marginBottom: "20px",
-                        borderRadius: "8px"
+                        padding: "12px",
+                        marginBottom:
+                            "20px",
+                        borderRadius:
+                            "8px",
+                        border:
+                            "1px solid #444"
                     }}
                 />
 
-                {filteredUsers.map((user) => (
+                {filteredUsers.length ===
+                0 ? (
 
                     <div
-                        key={user.id}
                         style={{
-                            border: "1px solid #ddd",
-                            padding: "15px",
-                            borderRadius: "10px",
-                            marginBottom: "10px"
+                            textAlign:
+                                "center",
+                            padding:
+                                "30px"
                         }}
                     >
+                        <h3>
+                            No users found
+                        </h3>
+                    </div>
 
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center"
-                            }}
-                        >
+                ) : (
 
-                            <div>
-
-                                <h3>
-                                    {user.name}
-                                </h3>
-
-                                <p>
-                                    Roll No: {user.roll_no}
-                                </p>
-
-                                <p>
-                                    Role: {user.role}
-                                </p>
-
-                            </div>
+                    filteredUsers.map(
+                        (user) => (
 
                             <div
+                                key={
+                                    user.id
+                                }
                                 style={{
-                                    display: "flex",
-                                    gap: "10px"
+                                    border:
+                                        "1px solid #ddd",
+                                    padding:
+                                        "15px",
+                                    borderRadius:
+                                        "10px",
+                                    marginBottom:
+                                        "10px"
                                 }}
                             >
 
-                                <button
-                                    onClick={() =>
-                                        toggleRole(user.id)
-                                    }
+                                <div
+                                    style={{
+                                        display:
+                                            "flex",
+                                        justifyContent:
+                                            "space-between",
+                                        alignItems:
+                                            "center"
+                                    }}
                                 >
-                                    {user.role === "admin"
-                                        ? "⬇ Make Student"
-                                        : "⬆ Make Admin"}
-                                </button>
 
-                                {user.role !== "admin" && (
+                                    <div>
 
-                                    <button
-                                        onClick={() =>
-                                            deleteUser(user.id)
-                                        }
+                                        <h3>
+                                            {
+                                                user.name
+                                            }
+                                        </h3>
+
+                                        <p>
+                                            Roll
+                                            No:
+                                            {" "}
+                                            {
+                                                user.roll_no
+                                            }
+                                        </p>
+
+                                        <p>
+                                            Role:
+
+                                            <span
+                                                style={{
+                                                    marginLeft:
+                                                        "8px",
+                                                    padding:
+                                                        "4px 10px",
+                                                    borderRadius:
+                                                        "20px",
+                                                    backgroundColor:
+                                                        user.role ===
+                                                        "admin"
+                                                            ? "#ec4899"
+                                                            : "#10b981",
+                                                    color:
+                                                        "#fff",
+                                                    fontSize:
+                                                        "12px",
+                                                    fontWeight:
+                                                        "bold"
+                                                }}
+                                            >
+                                                {
+                                                    user.role
+                                                }
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            display:
+                                                "flex",
+                                            gap:
+                                                "10px"
+                                        }}
                                     >
-                                        🗑 Delete
-                                    </button>
 
-                                )}
+                                        <button
+                                            onClick={() =>
+                                                toggleRole(
+                                                    user.id
+                                                )
+                                            }
+                                        >
+                                            {user.role ===
+                                            "admin"
+                                                ? "⬇ Make Student"
+                                                : "⬆ Make Admin"}
+                                        </button>
+
+                                        {user.role !==
+                                            "admin" && (
+
+                                            <button
+                                                onClick={() =>
+                                                    deleteUser(
+                                                        user.id
+                                                    )
+                                                }
+                                            >
+                                                🗑 Delete
+                                            </button>
+
+                                        )}
+
+                                    </div>
+
+                                </div>
 
                             </div>
 
-                        </div>
+                        )
+                    )
 
-                    </div>
-
-                ))}
+                )}
 
             </div>
         </>

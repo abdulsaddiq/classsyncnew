@@ -8,6 +8,7 @@ function CreateAssignment() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [subjectId, setSubjectId] = useState("");
+    const [dueDate, setDueDate] = useState("");
 
     const [subjects, setSubjects] = useState([]);
 
@@ -56,7 +57,8 @@ function CreateAssignment() {
                 {
                     title,
                     description,
-                    subject_id: subjectId
+                    subject_id: subjectId,
+                    due_date: dueDate
                 },
                 {
                     headers: {
@@ -73,6 +75,7 @@ function CreateAssignment() {
             setTitle("");
             setDescription("");
             setSubjectId("");
+            setDueDate("");
 
         } catch (error) {
 
@@ -139,6 +142,24 @@ function CreateAssignment() {
                         )
                     )}
                 </select>
+
+                <br /><br />
+
+                <label>
+                    📅 Due Date
+                </label>
+
+                <br />
+
+                <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) =>
+                        setDueDate(
+                            e.target.value
+                        )
+                    }
+                />
 
                 <br /><br />
 

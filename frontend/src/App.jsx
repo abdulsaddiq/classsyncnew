@@ -11,7 +11,7 @@ import CreateFolder from "./pages/CreateFolder";
 import UploadFile from "./pages/UploadFile";
 import Users from "./pages/Users";
 import CreateAssignment from "./pages/CreateAssignment";
-
+import Signup from "./pages/Signup";
 
 
 function App() {
@@ -77,6 +77,11 @@ function App() {
         <Route
           path="/create-assignment"
           element={<CreateAssignment />}
+        />
+
+        <Route
+          path="/signup"
+          element={<Signup />}
         />
 
       </Routes>
