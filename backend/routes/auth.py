@@ -31,10 +31,16 @@ def signup():
         bcrypt.gensalt()
     )
 
+    role = "student"
+
+    if User.query.count() == 0:
+        role = "admin"
+
     new_user = User(
-        name=name,
-        roll_no=roll_no,
-        password_hash=hashed_password.decode("utf-8")
+    name=name,
+    roll_no=roll_no,
+    password_hash=hashed_password.decode("utf-8"),
+    role=role
     )
 
     db.session.add(new_user)
