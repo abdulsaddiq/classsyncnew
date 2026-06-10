@@ -5,3 +5,4 @@ Flask-JWT-Extended
 python-dotenv
 Werkzeug
 gunicorn
+bcrypt
