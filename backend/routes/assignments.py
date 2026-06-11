@@ -76,6 +76,13 @@ def get_assignments():
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
                 else None
+            ),
+            "created_by": (
+                User.query.get(
+                    assignment.created_by
+                ).name
+                if assignment.created_by
+                else "Unknown"
             )
         }
         for assignment in assignments
@@ -103,6 +110,13 @@ def get_subject_assignments(subject_id):
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
                 else None
+            ),
+            "created_by": (
+                User.query.get(
+                    assignment.created_by
+                ).name
+                if assignment.created_by
+                else "Unknown"
             )
         }
         for assignment in assignments

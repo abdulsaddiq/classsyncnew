@@ -59,7 +59,14 @@ def get_announcements():
         {
             "id": announcement.id,
             "title": announcement.title,
-            "content": announcement.content
+            "content": announcement.content,
+            "created_by": (
+                User.query.get(
+                    announcement.created_by
+                ).name
+                if announcement.created_by
+                else "Unknown"
+            )
         }
         for announcement in announcements
     ])
