@@ -43,11 +43,6 @@ def upload_file():
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
-        return jsonify({
-            "error": "Admin access required"
-        }), 403
-
     uploaded_file = request.files.get("file")
 
     folder_id = request.form.get(
