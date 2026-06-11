@@ -61,13 +61,25 @@ function FolderView() {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return null;
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric"
-    });
+  const getFileIcon = (fileName) => {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const icons = {
+      pdf: "📕",
+      doc: "📘",
+      docx: "📘",
+      png: "🖼️",
+      jpg: "🖼️",
+      jpeg: "🖼️",
+      gif: "🖼️",
+      ppt: "📊",
+      pptx: "📊",
+      zip: "📦",
+      rar: "📦",
+      mp4: "🎥",
+      mp3: "🎵",
+      txt: "📄"
+    };
+    return icons[ext] || "📄";
   };
 
   const filteredFiles = files.filter(file =>
@@ -139,6 +151,19 @@ function FolderView() {
       fontSize: "12px",
       fontWeight: "600",
       transition: "all 0.2s"
+    },
+    downloadButton: {
+      background: "linear-gradient(135deg, #10b981, #059669)",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      padding: "6px 14px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "600",
+      transition: "all 0.2s",
+      textDecoration: "none",
+      display: "inline-block"
     }
   };
 
@@ -146,7 +171,7 @@ function FolderView() {
     if (type === "files") {
       return hasSearch
         ? "🔍 No files match your search"
-        : "📄 No notes uploaded yet";
+        : "📂 This folder is empty.\nUpload notes, PDFs, PPTs or resources.";
     }
     return hasSearch
       ? "🔍 No folders match your search"
@@ -239,81 +264,87 @@ function FolderView() {
             </div>
 
             {filteredFiles.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "50px", background: "rgba(167, 139, 250, 0.05)", borderRadius: "12px", border: "2px solid #2d3748", color: "#a0aec0" }}>
+              <div style={{ textAlign: "center", padding: "50px", background: "rgba(167, 139, 250, 0.05)", borderRadius: "12px", border: "2px solid #2d3748", color: "#a0aec0", whiteSpace: "pre-line" }}>
                 {getEmptyMessage("files", searchTerm.length > 0)}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "900px", margin: "0 auto" }}>
-                {filteredFiles.map(file => (
-                  <div
-                    key={file.id}
-                    style={{
-                      background: "rgba(167, 139, 250, 0.05)",
-                      padding: "18px",
-                      borderRadius: "12px",
-                      border: "2px solid #2d3748",
-                      transition: "all 0.2s ease",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-3px)";
-                      e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.3)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ color: "#a78bfa", margin: "0 0 8px 0", fontSize: "18px" }}>
-                          📄 {file.file_name}
-                        </h3>
-                        {file.uploaded_by && (
-                          <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "8px" }}>
-                            👤 Uploaded by {file.uploaded_by}
-                          </p>
-                        )}
-                        {file.created_at && (
-                          <p style={{ color: "#94a3b8", fontSize: "12px", marginBottom: "0" }}>
-                            📅 Uploaded {formatDate(file.created_at)}
-                          </p>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <a
-                          href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            background: "linear-gradient(135deg, #667eea, #764ba2)",
-                            color: "white",
-                            textDecoration: "none",
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            transition: "all 0.2s"
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-                        >
-                          📖 Open File
-                        </a>
-                        {role === "admin" && (
-                          <button
-                            onClick={() => deleteFile(file.id)}
-                            style={styles.deleteButton}
+                {filteredFiles.map(file => {
+                  const fileIcon = getFileIcon(file.file_name);
+                  
+                  return (
+                    <div
+                      key={file.id}
+                      style={{
+                        background: "rgba(167, 139, 250, 0.05)",
+                        padding: "18px",
+                        borderRadius: "12px",
+                        border: "2px solid #2d3748",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-3px)";
+                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.3)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+                            <h3 style={{ color: "#a78bfa", margin: 0, fontSize: "18px" }}>
+                              {fileIcon} {file.file_name}
+                            </h3>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                          <a
+                            href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              background: "linear-gradient(135deg, #667eea, #764ba2)",
+                              color: "white",
+                              textDecoration: "none",
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              transition: "all 0.2s"
+                            }}
                             onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
                             onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                           >
-                            🗑 Delete
-                          </button>
-                        )}
+                            📖 Open
+                          </a>
+                          <a
+                            href={`${import.meta.env.VITE_API_URL}/files/download/${file.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={styles.downloadButton}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                          >
+                            ⬇️ Download
+                          </a>
+                          {role === "admin" && (
+                            <button
+                              onClick={() => deleteFile(file.id)}
+                              style={styles.deleteButton}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                            >
+                              🗑 Delete
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
