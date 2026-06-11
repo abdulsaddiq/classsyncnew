@@ -165,7 +165,9 @@ def download_file(file_id):
             "error": "File not found"
         }), 404
 
-    return redirect(file.file_url)
+    return redirect(
+    f"{file.file_url}?download={file.file_name}"
+    )
 
 
 @files_bp.route(
