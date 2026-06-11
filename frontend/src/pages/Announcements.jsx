@@ -1,126 +1,286 @@
 import { useEffect, useState } from "react";
-
 import api from "../services/api";
 import Navbar from "../components/Navbar";
 
 function Announcements() {
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const [announcements, setAnnouncements] =
-        useState([]);
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.get("/announcements", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setAnnouncements(response.data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
 
-    useEffect(() => {
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+  };
 
-        const fetchAnnouncements =
-            async () => {
+  const getAnnouncementType = (title, content) => {
+    const text = (title + " " + content).toLowerCase();
+    if (text.includes("exam") || text.includes("test") || text.includes("midterm")) {
+      return { label: "📝 Exam", color: "#ef4444", bg: "rgba(239, 68, 68, 0.1)" };
+    }
+    if (text.includes("holiday") || text.includes("break") || text.includes("vacation")) {
+      return { label: "🎉 Holiday", color: "#10b981", bg: "rgba(16, 185, 129, 0.1)" };
+    }
+    if (text.includes("assignment") || text.includes("homework") || text.includes("submit")) {
+      return { label: "📚 Assignment", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)" };
+    }
+    if (text.includes("event") || text.includes("workshop") || text.includes("seminar")) {
+      return { label: "🎪 Event", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" };
+    }
+    return { label: "📢 Announcement", color: "#a78bfa", bg: "rgba(167, 139, 250, 0.1)" };
+  };
 
-                try {
+  const styles = {
+    container: {
+      backgroundColor: "#0a0e27",
+      minHeight: "100vh",
+      padding: "30px 20px"
+    },
+    content: {
+      maxWidth: "900px",
+      margin: "0 auto"
+    },
+    heading: {
+      color: "#ffffff",
+      fontSize: "32px",
+      marginBottom: "8px",
+      textAlign: "center"
+    },
+    subheading: {
+      color: "#a0aec0",
+      fontSize: "14px",
+      marginBottom: "30px",
+      textAlign: "center"
+    },
+    announcementCard: {
+      background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
+      borderRadius: "12px",
+      padding: "24px",
+      marginBottom: "20px",
+      border: "1px solid #2d3748",
+      borderLeft: "4px solid #f59e0b",
+      transition: "all 0.3s ease",
+      cursor: "pointer"
+    },
+    announcementHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      flexWrap: "wrap",
+      gap: "12px",
+      marginBottom: "12px"
+    },
+    announcementTitle: {
+      color: "#ffffff",
+      fontSize: "20px",
+      fontWeight: "600",
+      margin: 0
+    },
+    typeBadge: {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "4px 12px",
+      borderRadius: "20px",
+      fontSize: "12px",
+      fontWeight: "600",
+      gap: "6px"
+    },
+    announcementMeta: {
+      display: "flex",
+      gap: "16px",
+      flexWrap: "wrap",
+      marginBottom: "16px",
+      paddingBottom: "12px",
+      borderBottom: "1px solid #2d3748"
+    },
+    metaText: {
+      color: "#94a3b8",
+      fontSize: "13px",
+      display: "flex",
+      alignItems: "center",
+      gap: "6px"
+    },
+    announcementContent: {
+      color: "#cbd5e0",
+      fontSize: "15px",
+      lineHeight: "1.6",
+      margin: 0
+    },
+    loadingContainer: {
+      textAlign: "center",
+      padding: "60px",
+      background: "#1a1f3a",
+      borderRadius: "16px",
+      border: "1px solid #2d3748"
+    },
+    loadingText: {
+      color: "#a0aec0",
+      fontSize: "14px"
+    },
+    emptyContainer: {
+      textAlign: "center",
+      padding: "60px",
+      background: "#1a1f3a",
+      borderRadius: "16px",
+      border: "1px solid #2d3748"
+    },
+    emptyIcon: {
+      fontSize: "48px",
+      marginBottom: "16px"
+    },
+    emptyTitle: {
+      color: "#ffffff",
+      fontSize: "20px",
+      marginBottom: "8px"
+    },
+    emptyText: {
+      color: "#94a3b8",
+      fontSize: "14px",
+      margin: 0
+    },
+    spinner: {
+      width: "40px",
+      height: "40px",
+      border: "3px solid #2d3748",
+      borderTopColor: "#f59e0b",
+      borderRadius: "50%",
+      animation: "spin 1s linear infinite",
+      margin: "0 auto 16px"
+    }
+  };
 
-                    const token =
-                        localStorage.getItem(
-                            "token"
-                        );
-
-                    const response =
-                        await api.get(
-                            "/announcements",
-                            {
-                                headers: {
-                                    Authorization:
-                                        `Bearer ${token}`
-                                }
-                            }
-                        );
-
-                    setAnnouncements(
-                        response.data
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        error
-                    );
-                }
-            };
-
-        fetchAnnouncements();
-
-    }, []);
-
+  if (loading) {
     return (
-        <>
-            <Navbar />
-
-            <div
-                style={{
-                    padding: "20px"
-                }}
-            >
-
-                <h1>
-                    Announcements
-                </h1>
-
-                {announcements.length === 0 ? (
-                    <p>
-                        📢 No announcements yet
-                    </p>
-                ) : (
-                    announcements.map(
-                        (
-                            announcement
-                        ) => (
-                            <div
-                                key={
-                                    announcement.id
-                                }
-                                style={{
-                                    border:
-                                        "1px solid #ddd",
-                                    padding:
-                                        "15px",
-                                    borderRadius:
-                                        "10px",
-                                    marginBottom:
-                                        "15px"
-                                }}
-                            >
-                                <h3>
-                                    {
-                                        announcement.title
-                                    }
-                                </h3>
-
-                                <p
-                                    style={{
-                                        color:
-                                            "#666",
-                                        fontSize:
-                                            "14px",
-                                        marginBottom:
-                                            "10px"
-                                    }}
-                                >
-                                    👤 Posted by:{" "}
-                                    {
-                                        announcement.created_by
-                                    }
-                                </p>
-
-                                <p>
-                                    {
-                                        announcement.content
-                                    }
-                                </p>
-                            </div>
-                        )
-                    )
-                )}
-
+      <>
+        <Navbar />
+        <div style={styles.container}>
+          <div style={styles.content}>
+            <div style={styles.loadingContainer}>
+              <div style={styles.spinner}></div>
+              <p style={styles.loadingText}>Loading announcements...</p>
+              <style>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
             </div>
-        </>
+          </div>
+        </div>
+      </>
     );
+  }
 
+  return (
+    <>
+      <Navbar />
+      <div style={styles.container}>
+        <div style={styles.content}>
+          <h1 style={styles.heading}>📢 Announcements</h1>
+          <p style={styles.subheading}>Important updates and notices</p>
+
+          {announcements.length === 0 ? (
+            <div style={styles.emptyContainer}>
+              <div style={styles.emptyIcon}>📢</div>
+              <h3 style={styles.emptyTitle}>No announcements yet</h3>
+              <p style={styles.emptyText}>Check back later for important updates</p>
+            </div>
+          ) : (
+            announcements.map((announcement) => {
+              const announcementType = getAnnouncementType(announcement.title, announcement.content);
+              const relativeTime = getRelativeTime(announcement.created_at);
+              
+              return (
+                <div
+                  key={announcement.id}
+                  style={{
+                    ...styles.announcementCard,
+                    borderLeftColor: announcementType.color
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.borderColor = announcementType.color;
+                    e.currentTarget.style.boxShadow = `0 10px 25px ${announcementType.color}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.borderColor = "#2d3748";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <div style={styles.announcementHeader}>
+                    <h3 style={styles.announcementTitle}>{announcement.title}</h3>
+                    <span
+                      style={{
+                        ...styles.typeBadge,
+                        backgroundColor: announcementType.bg,
+                        color: announcementType.color
+                      }}
+                    >
+                      {announcementType.label}
+                    </span>
+                  </div>
+                  
+                  <div style={styles.announcementMeta}>
+                    <span style={styles.metaText}>
+                      👤 Posted by {announcement.created_by || "Admin"}
+                    </span>
+                    {relativeTime && (
+                      <span style={styles.metaText}>
+                        🕒 {relativeTime}
+                      </span>
+                    )}
+                    {announcement.created_at && !relativeTime && (
+                      <span style={styles.metaText}>
+                        📅 {new Date(announcement.created_at).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric"
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p style={styles.announcementContent}>{announcement.content}</p>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default Announcements;
