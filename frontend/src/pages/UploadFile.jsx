@@ -5,14 +5,6 @@ import Navbar from "../components/Navbar";
 
 function UploadFile() {
 
-    const user = JSON.parse(
-    localStorage.getItem("user")
-    );
-
-    if (user?.role !== "admin") {
-    return <h2>Access Denied</h2>;
-    }
-
     const [subjects, setSubjects] =
         useState([]);
 
