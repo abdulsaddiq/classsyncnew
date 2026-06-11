@@ -64,14 +64,18 @@ function Navbar() {
           <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
             <Link to="/dashboard" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Dashboard</Link>
             <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcements</Link>
+            
+            {/* Visible to everyone */}
+            <Link to="/create-announcement" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcement</Link>
+            <Link to="/upload-file" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Upload</Link>
+            <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Assignment</Link>
+            
+            {/* Admin only */}
             {user?.role === "admin" && (
               <>
-                <Link to="/create-announcement" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Create</Link>
                 <Link to="/create-subject" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Subjects</Link>
                 <Link to="/create-folder" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Folders</Link>
-                <Link to="/upload-file" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Upload</Link>
                 <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Users</Link>
-                <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Assignment</Link>
               </>
             )}
           </div>
@@ -108,14 +112,18 @@ function Navbar() {
         <div style={{ position: "fixed", top: "64px", left: 0, right: 0, background: "#0f0f1a", borderBottom: "1px solid #1a1a2e", padding: "20px", zIndex: 999, display: "flex", flexDirection: "column", gap: "8px" }}>
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Dashboard</Link>
           <Link to="/announcements" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Announcements</Link>
+          
+          {/* Visible to everyone */}
+          <Link to="/create-announcement" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Announcement</Link>
+          <Link to="/upload-file" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Upload File</Link>
+          <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignment</Link>
+          
+          {/* Admin only */}
           {user?.role === "admin" && (
             <>
-              <Link to="/create-announcement" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Announcement</Link>
               <Link to="/create-subject" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Subject</Link>
               <Link to="/create-folder" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Folder</Link>
-              <Link to="/upload-file" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Upload File</Link>
               <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Users</Link>
-              <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignment</Link>
             </>
           )}
         </div>
