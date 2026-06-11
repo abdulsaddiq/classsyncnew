@@ -185,11 +185,6 @@ def delete_file(file_id):
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
-        return jsonify({
-            "error": "Admin access required"
-        }), 403
-
     file = File.query.get(file_id)
 
     if not file:

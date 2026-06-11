@@ -25,11 +25,6 @@ def create_assignment():
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
-        return jsonify({
-            "error": "Admin access required"
-        }), 403
-
     data = request.get_json()
 
     due_date = None
