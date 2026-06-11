@@ -22,6 +22,10 @@ from models import db
 from models.user import User
 from models.file import File
 from models.activity import Activity
+from flask import redirect
+
+
+
 
 files_bp = Blueprint(
     "files",
@@ -140,11 +144,10 @@ def view_file(file_id):
         return jsonify({
             "error": "File not found"
         }), 404
+    
+    return redirect(file.file_url)
 
-    return send_file(
-        file.file_url,
-        as_attachment=False
-    )
+
 
 
 @files_bp.route(
@@ -161,10 +164,7 @@ def download_file(file_id):
             "error": "File not found"
         }), 404
 
-    return send_file(
-        file.file_url,
-        as_attachment=True
-    )
+    return redirect(file.file_url)
 
 
 @files_bp.route(
