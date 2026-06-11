@@ -1,5 +1,9 @@
 import os
 
+import uuid
+
+from utils.supabase_client import supabase
+
 from flask import (
     Blueprint,
     request,
@@ -52,15 +56,31 @@ def upload_file():
         }), 400
 
     filename = secure_filename(
-        uploaded_file.filename
-    )
+     uploaded_file.filename
+)
 
-    filepath = os.path.join(
-        UPLOAD_FOLDER,
-        filename
-    )
+    unique_filename = (
+      f"{uuid.uuid4()}_{filename}"
+)
 
-    uploaded_file.save(filepath)
+    file_bytes = uploaded_file.read()
+
+    supabase.storage.from_(
+    "classsync-files"
+).upload(
+    unique_filename,
+    file_bytes,
+    {
+        "content-type":
+        uploaded_file.content_type
+    }
+)
+
+    filepath = supabase.storage.from_(
+    "classsync-files"
+).get_public_url(
+    unique_filename
+)
 
     new_file = File(
         folder_id=folder_id,
