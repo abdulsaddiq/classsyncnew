@@ -90,3 +90,29 @@ def get_subject_folders(subject_id):
         }
         for folder in folders
     ])
+
+@subjects_bp.route("/<int:subject_id>", methods=["DELETE"])
+@jwt_required()
+def delete_subject(subject_id):
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if user.role != "admin":
+        return jsonify({
+            "error": "Admin access required"
+        }), 403
+
+    subject = Subject.query.get(subject_id)
+
+    if not subject:
+        return jsonify({
+            "error": "Subject not found"
+        }), 404
+
+    db.session.delete(subject)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Subject deleted successfully"
+    }), 200
