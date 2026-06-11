@@ -5,23 +5,47 @@ import Navbar from "../components/Navbar";
 function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(null);
+  const user = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await api.get("/announcements", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setAnnouncements(response.data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAnnouncements();
   }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await api.get("/announcements", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnnouncements(response.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAnnouncement = async (announcementId, title) => {
+    if (!window.confirm(`⚠️ Delete announcement "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(announcementId);
+    try {
+      const token = localStorage.getItem("token");
+      await api.delete(`/announcements/${announcementId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      await fetchAnnouncements();
+      alert("✅ Announcement deleted successfully");
+    } catch (error) {
+      console.error(error);
+      alert("❌ Failed to delete announcement");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const getRelativeTime = (dateString) => {
     if (!dateString) return null;
@@ -106,7 +130,8 @@ function Announcements() {
       color: "#ffffff",
       fontSize: "20px",
       fontWeight: "600",
-      margin: 0
+      margin: 0,
+      flex: 1
     },
     typeBadge: {
       display: "inline-flex",
@@ -119,11 +144,18 @@ function Announcements() {
     },
     announcementMeta: {
       display: "flex",
-      gap: "16px",
+      justifyContent: "space-between",
+      alignItems: "center",
       flexWrap: "wrap",
+      gap: "16px",
       marginBottom: "16px",
       paddingBottom: "12px",
       borderBottom: "1px solid #2d3748"
+    },
+    metaLeft: {
+      display: "flex",
+      gap: "16px",
+      flexWrap: "wrap"
     },
     metaText: {
       color: "#94a3b8",
@@ -137,6 +169,21 @@ function Announcements() {
       fontSize: "15px",
       lineHeight: "1.6",
       margin: 0
+    },
+    deleteButton: {
+      background: "linear-gradient(135deg, #ef4444, #dc2626)",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      padding: "6px 14px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "600",
+      transition: "all 0.2s"
+    },
+    deleteButtonDisabled: {
+      opacity: 0.6,
+      cursor: "not-allowed"
     },
     loadingContainer: {
       textAlign: "center",
@@ -253,22 +300,43 @@ function Announcements() {
                   </div>
                   
                   <div style={styles.announcementMeta}>
-                    <span style={styles.metaText}>
-                      👤 Posted by {announcement.created_by || "Admin"}
-                    </span>
-                    {relativeTime && (
+                    <div style={styles.metaLeft}>
                       <span style={styles.metaText}>
-                        🕒 {relativeTime}
+                        👤 Posted by {announcement.created_by || "Admin"}
                       </span>
-                    )}
-                    {announcement.created_at && !relativeTime && (
-                      <span style={styles.metaText}>
-                        📅 {new Date(announcement.created_at).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric"
-                        })}
-                      </span>
+                      {relativeTime && (
+                        <span style={styles.metaText}>
+                          🕒 {relativeTime}
+                        </span>
+                      )}
+                      {announcement.created_at && !relativeTime && (
+                        <span style={styles.metaText}>
+                          📅 {new Date(announcement.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric"
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {user?.role === "admin" && (
+                      <button
+                        onClick={() => deleteAnnouncement(announcement.id, announcement.title)}
+                        disabled={deleting === announcement.id}
+                        style={{
+                          ...styles.deleteButton,
+                          ...(deleting === announcement.id ? styles.deleteButtonDisabled : {})
+                        }}
+                        onMouseEnter={(e) => {
+                          if (deleting !== announcement.id) e.currentTarget.style.opacity = "0.85";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = "1";
+                        }}
+                      >
+                        {deleting === announcement.id ? "⏳ Deleting..." : "🗑 Delete"}
+                      </button>
                     )}
                   </div>
                   

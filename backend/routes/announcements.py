@@ -70,3 +70,29 @@ def get_announcements():
         }
         for announcement in announcements
     ])
+
+@announcements_bp.route("/<int:announcement_id>", methods=["DELETE"])
+@jwt_required()
+def delete_announcement(announcement_id):
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if user.role != "admin":
+        return jsonify({
+            "error": "Admin access required"
+        }), 403
+
+    announcement = Announcement.query.get(announcement_id)
+
+    if not announcement:
+        return jsonify({
+            "error": "Announcement not found"
+        }), 404
+
+    db.session.delete(announcement)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Announcement deleted successfully"
+    }), 200
