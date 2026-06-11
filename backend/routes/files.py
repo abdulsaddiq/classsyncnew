@@ -51,8 +51,15 @@ def upload_file():
     uploaded_file = request.files.get("file")
 
     folder_id = request.form.get(
-        "folder_id"
-    )
+    "folder_id"
+)
+
+    if not folder_id:
+      return jsonify({
+        "error": "Please select a folder"
+    }), 400
+
+    folder_id = int(folder_id)
 
     if not uploaded_file:
         return jsonify({
