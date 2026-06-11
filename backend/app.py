@@ -35,7 +35,17 @@ os.makedirs(
 app.config.from_object(Config)
 jwt = JWTManager(app)
 
-CORS(app)
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",
+                "https://classsyncnew.vercel.app"
+            ]
+        }
+    }
+)
 
 db.init_app(app)
 
