@@ -98,8 +98,8 @@ function SubjectPage() {
       marginBottom: "8px"
     },
     divider: {
-      margin: "30px 0",
-      borderTop: "1px solid #2d3748"
+      margin: "40px 0",
+      borderTop: "3px solid #2d3748"
     }
   };
 
@@ -109,6 +109,15 @@ function SubjectPage() {
     return "#a78bfa";
   };
 
+  const getEmptyMessage = (type, hasSearch) => {
+    if (type === "folders") {
+      return hasSearch 
+        ? "🔍 No folders match your search"
+        : "📁 No folders created yet";
+    }
+    return "📝 No assignments have been posted yet";
+  };
+
   return (
     <>
       <Navbar />
@@ -116,16 +125,19 @@ function SubjectPage() {
         <div style={styles.content}>
           
           {/* Header */}
-          <h1 style={styles.heading}>📚 Course Materials</h1>
-          <p style={styles.subheading}>Browse folders and track assignments</p>
+          <h1 style={styles.heading}>📚 Subject Resources</h1>
+          <p style={styles.subheading}>Browse notes, folders and assignments</p>
 
           {/* Folders Section */}
-          <div style={{ marginBottom: "35px" }}>
+          <div style={{ marginBottom: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "15px" }}>
-              <h2 style={styles.sectionTitle}>📁 Folders ({folders.length})</h2>
+              <div>
+                <h2 style={styles.sectionTitle}>📁 Folders ({filteredFolders.length})</h2>
+                <p style={styles.sectionSubtitle}>Browse notes, PDFs and study materials</p>
+              </div>
               <input
                 type="text"
-                placeholder="🔍 Search folders..."
+                placeholder="🔍 Search notes and folders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={styles.searchBox}
@@ -134,7 +146,7 @@ function SubjectPage() {
 
             {filteredFolders.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px", background: "#1a1f3a", borderRadius: "10px", color: "#a0aec0" }}>
-                📁 No folders found
+                {getEmptyMessage("folders", searchTerm.length > 0)}
               </div>
             ) : (
               filteredFolders.map(folder => (
@@ -142,7 +154,7 @@ function SubjectPage() {
                   key={folder.id}
                   to={`/folder/${folder.id}`}
                   style={styles.folderItem}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateX(5px)"; e.currentTarget.style.borderColor = "#667eea"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateX(8px)"; e.currentTarget.style.borderColor = "#667eea"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = "translateX(0)"; e.currentTarget.style.borderColor = "#2d3748"; }}
                 >
                   📁 {folder.folder_name}
@@ -156,70 +168,92 @@ function SubjectPage() {
 
           {/* Assignments Section */}
           <div>
-            <h2 style={styles.sectionTitle}>📝 Assignments ({assignments.length})</h2>
-            <p style={styles.sectionSubtitle}>Track coursework and upcoming deadlines</p>
+            <div style={{ textAlign: "center", marginBottom: "25px" }}>
+              <h2 style={{ ...styles.sectionTitle, fontSize: "24px" }}>📝 Assignments</h2>
+              <p style={{ ...styles.sectionSubtitle, fontSize: "15px" }}>
+                {assignments.length === 0 
+                  ? "No Assignments Available"
+                  : `${assignments.length} ${assignments.length === 1 ? "Assignment Available" : "Assignments Available"}`
+                }
+              </p>
+              <p style={{ ...styles.sectionSubtitle, marginTop: "0px" }}>Track coursework and upcoming deadlines</p>
+            </div>
 
             {assignments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", background: "#1a1f3a", borderRadius: "10px", color: "#a0aec0" }}>
-                📝 No assignments have been posted yet
+              <div style={{ textAlign: "center", padding: "50px", background: "rgba(167, 139, 250, 0.05)", borderRadius: "12px", border: "2px solid #2d3748", color: "#a0aec0" }}>
+                {getEmptyMessage("assignments", false)}
               </div>
             ) : (
-              assignments.map(assignment => {
-                const daysLeft = getDaysLeft(assignment.due_date);
-                const isOverdue = daysLeft < 0;
-                const isDueToday = daysLeft === 0;
-                const isUrgent = daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
-                const statusColor = getStatusColor(isOverdue, isUrgent, isDueToday);
-                
-                return (
-                  <div 
-                    key={assignment.id} 
-                    style={{
-                      borderLeft: `4px solid ${statusColor}`,
-                      background: "rgba(167, 139, 250, 0.05)",
-                      padding: "18px",
-                      borderRadius: "10px",
-                      border: "1px solid #2d3748",
-                      borderLeftWidth: "4px",
-                      marginBottom: "16px",
-                      transition: "all 0.2s ease"
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
-                  >
-                    <h3 style={{ 
-                      color: statusColor,
-                      margin: "0 0 8px 0", 
-                      fontSize: "18px" 
-                    }}>
-                      {assignment.title}
-                    </h3>
-                    <p style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "10px" }}>👤 Posted by {assignment.created_by}</p>
-                    <p style={{ color: "#cbd5e0", lineHeight: "1.5", marginBottom: "12px" }}>{assignment.description}</p>
-                    
-                    {assignment.due_date && (
-                      <div style={{ display: "inline-block", background: "#1a1f3a", padding: "8px 14px", borderRadius: "8px", marginTop: "12px" }}>
-                        <div style={{ color: "#a0aec0", fontSize: "12px" }}>📅 Due: {formatDate(assignment.due_date)}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "900px", margin: "0 auto" }}>
+                {assignments.map(assignment => {
+                  const daysLeft = getDaysLeft(assignment.due_date);
+                  const isOverdue = daysLeft < 0;
+                  const isDueToday = daysLeft === 0;
+                  const isUrgent = daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
+                  const statusColor = getStatusColor(isOverdue, isUrgent, isDueToday);
+                  
+                  return (
+                    <div 
+                      key={assignment.id} 
+                      style={{
+                        borderLeft: `4px solid ${statusColor}`,
+                        background: "rgba(167, 139, 250, 0.08)",
+                        padding: "20px",
+                        borderRadius: "12px",
+                        border: "2px solid #2d3748",
+                        borderLeftWidth: "4px",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.3)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)"; }}
+                    >
+                      <h3 style={{ 
+                        color: statusColor,
+                        margin: "0 0 10px 0", 
+                        fontSize: "20px",
+                        fontWeight: "600"
+                      }}>
+                        {assignment.title}
+                      </h3>
+                      <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "12px" }}>
+                        👤 Posted by {assignment.created_by}
+                      </p>
+                      <p style={{ color: "#cbd5e0", lineHeight: "1.6", marginBottom: "16px", fontSize: "14px" }}>
+                        {assignment.description?.trim() || "No description provided."}
+                      </p>
+                      
+                      {assignment.due_date && (
                         <div style={{ 
-                          color: statusColor,
-                          fontWeight: "bold", 
-                          fontSize: "13px", 
-                          marginTop: "4px" 
+                          display: "inline-block", 
+                          background: "#1a1f3a", 
+                          padding: "10px 16px", 
+                          borderRadius: "10px",
+                          border: `1px solid ${statusColor}20`
                         }}>
-                          {isOverdue 
-                            ? "❌ Overdue" 
-                            : isDueToday 
-                            ? "📅 Due Today" 
-                            : isUrgent 
-                            ? "⚠️ Urgent! Due soon" 
-                            : `⏳ ${daysLeft} days left`
-                          }
+                          <div style={{ color: "#a0aec0", fontSize: "13px", marginBottom: "5px" }}>
+                            📅 Due: {formatDate(assignment.due_date)}
+                          </div>
+                          <div style={{ 
+                            color: statusColor,
+                            fontWeight: "bold", 
+                            fontSize: "14px"
+                          }}>
+                            {isOverdue 
+                              ? "❌ Overdue" 
+                              : isDueToday 
+                              ? "📅 Due Today" 
+                              : isUrgent 
+                              ? "⚠️ Urgent! Due soon" 
+                              : `⏳ ${daysLeft} days left`
+                            }
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
