@@ -220,7 +220,7 @@ function FolderView() {
                             }}
                         >
                             <a
-                                href={`http://127.0.0.1:5000/api/files/view/${file.id}`}
+                                href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
                                 target="_blank"
                                 rel="noreferrer"
                             >
