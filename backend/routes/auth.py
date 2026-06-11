@@ -14,7 +14,9 @@ def signup():
     data = request.get_json()
 
     name = data.get("name")
-    roll_no = data.get("roll_no")
+    roll_no = data.get(
+    "roll_no"
+).strip().upper()
     password = data.get("password")
 
     existing_user = User.query.filter_by(
@@ -55,7 +57,9 @@ def login():
 
     data = request.get_json()
 
-    roll_no = data.get("roll_no")
+    roll_no = data.get(
+    "roll_no"
+).strip().upper()
     password = data.get("password")
 
     user = User.query.filter_by(

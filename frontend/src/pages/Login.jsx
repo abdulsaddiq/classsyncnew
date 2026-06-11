@@ -116,7 +116,7 @@ return (
                     value={rollNo}
                     onChange={(e) =>
                         setRollNo(
-                            e.target.value
+                            e.target.value.toUpperCase()
                         )
                     }
                     style={{
