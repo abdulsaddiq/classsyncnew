@@ -14,6 +14,8 @@ from routes.assignments import assignments_bp
 from models.activity import Activity
 from routes.activities import activities_bp
 from utils.supabase_client import supabase
+from models.comment import Comment
+from routes.comments import comments_bp
 
 
 
@@ -70,6 +72,11 @@ app.register_blueprint(
 app.register_blueprint(
     activities_bp,
     url_prefix="/api/activities"
+)
+
+app.register_blueprint(
+    comments_bp,
+    url_prefix="/api/comments"
 )
 
 with app.app_context():

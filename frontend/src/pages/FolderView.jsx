@@ -9,6 +9,9 @@ function FolderView() {
   const [folders, setFolders] = useState([]);
   const [role, setRole] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [comments, setComments] = useState({});
+  const [newComments, setNewComments] = useState({});
+  const [openComments, setOpenComments] = useState({});
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -26,6 +29,21 @@ function FolderView() {
         
         setFiles(filesRes.data);
         setFolders(foldersRes.data);
+
+        // Fetch comments for each file
+        const commentsData = {};
+        for (const file of filesRes.data) {
+          try {
+            const commentsRes = await api.get(
+              `/comments/file/${file.id}`,
+              { headers }
+            );
+            commentsData[file.id] = commentsRes.data;
+          } catch {
+            commentsData[file.id] = [];
+          }
+        }
+        setComments(commentsData);
       } catch (error) {
         console.error(error);
       }
@@ -59,6 +77,58 @@ function FolderView() {
       console.error(error);
       alert("Delete failed");
     }
+  };
+
+  const postComment = async (fileId) => {
+    const content = newComments[fileId];
+    if (!content?.trim()) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      await api.post(
+        "/comments",
+        {
+          file_id: fileId,
+          content
+        },
+        { headers }
+      );
+
+      const commentsRes = await api.get(
+        `/comments/file/${fileId}`,
+        { headers }
+      );
+
+      setComments(prev => ({
+        ...prev,
+        [fileId]: commentsRes.data
+      }));
+
+      setNewComments(prev => ({
+        ...prev,
+        [fileId]: ""
+      }));
+
+      // Auto-open comments after posting
+      setOpenComments(prev => ({
+        ...prev,
+        [fileId]: true
+      }));
+    } catch (error) {
+      console.error(error);
+      alert("Failed to add comment");
+    }
+  };
+
+  const toggleComments = (fileId) => {
+    setOpenComments(prev => ({
+      ...prev,
+      [fileId]: !prev[fileId]
+    }));
   };
 
   const getFileIcon = (fileName) => {
@@ -164,6 +234,20 @@ function FolderView() {
       transition: "all 0.2s",
       textDecoration: "none",
       display: "inline-block"
+    },
+    commentsButton: {
+      background: "transparent",
+      border: "1px solid #2d3748",
+      borderRadius: "8px",
+      padding: "6px 12px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "500",
+      transition: "all 0.2s",
+      color: "#cbd5e0",
+      display: "flex",
+      alignItems: "center",
+      gap: "6px"
     }
   };
 
@@ -271,6 +355,8 @@ function FolderView() {
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "900px", margin: "0 auto" }}>
                 {filteredFiles.map(file => {
                   const fileIcon = getFileIcon(file.file_name);
+                  const isOpen = openComments[file.id];
+                  const commentCount = comments[file.id]?.length || 0;
                   
                   return (
                     <div
@@ -342,6 +428,127 @@ function FolderView() {
                           )}
                         </div>
                       </div>
+
+                      {/* Comments Toggle Button */}
+                      <hr style={{ borderColor: "#2d3748", margin: "16px 0 12px 0" }} />
+                      
+                      <button
+                        onClick={() => toggleComments(file.id)}
+                        style={styles.commentsButton}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#1a1f3a";
+                          e.currentTarget.style.borderColor = "#667eea";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.borderColor = "#2d3748";
+                        }}
+                      >
+                        {isOpen ? "▼" : "▶"} 💬 Comments ({commentCount})
+                      </button>
+
+                      {/* Collapsible Comments Section */}
+                      {isOpen && (
+                        <>
+                          <div style={{ marginTop: "16px" }}>
+                            {commentCount > 0 ? (
+                              comments[file.id].map((comment) => (
+                                <div
+                                  key={comment.id}
+                                  style={{
+                                    background: "#1a1f3a",
+                                    padding: "10px",
+                                    borderRadius: "8px",
+                                    marginBottom: "8px"
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      color: "#a78bfa",
+                                      fontWeight: "bold",
+                                      fontSize: "13px"
+                                    }}
+                                  >
+                                    {comment.username}
+                                  </div>
+                                  <div
+                                    style={{
+                                      color: "#e2e8f0",
+                                      marginTop: "4px"
+                                    }}
+                                  >
+                                    {comment.content}
+                                  </div>
+                                  <div
+                                    style={{
+                                      color: "#94a3b8",
+                                      fontSize: "11px",
+                                      marginTop: "4px"
+                                    }}
+                                  >
+                                    {comment.created_at}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p style={{ color: "#94a3b8", marginBottom: "12px" }}>
+                                Be the first to comment 💬
+                              </p>
+                            )}
+
+                            {/* Add Comment Input */}
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "10px",
+                                marginTop: "12px"
+                              }}
+                            >
+                              <input
+                                type="text"
+                                placeholder="Write a comment..."
+                                value={newComments[file.id] || ""}
+                                onChange={(e) =>
+                                  setNewComments(prev => ({
+                                    ...prev,
+                                    [file.id]: e.target.value
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    postComment(file.id);
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: "10px",
+                                  borderRadius: "8px",
+                                  border: "1px solid #2d3748",
+                                  background: "#1a1f3a",
+                                  color: "white",
+                                  outline: "none"
+                                }}
+                              />
+                              <button
+                                onClick={() => postComment(file.id)}
+                                style={{
+                                  background: "#667eea",
+                                  color: "white",
+                                  border: "none",
+                                  padding: "10px 16px",
+                                  borderRadius: "8px",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s"
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                              >
+                                Post
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}
