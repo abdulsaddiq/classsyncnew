@@ -7,3 +7,4 @@ Werkzeug
 gunicorn
 bcrypt
 psycopg2-binary
+supabase

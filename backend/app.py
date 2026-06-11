@@ -13,6 +13,8 @@ from models.assignment import Assignment
 from routes.assignments import assignments_bp
 from models.activity import Activity
 from routes.activities import activities_bp
+from utils.supabase_client import supabase
+
 
 
 
@@ -78,6 +80,20 @@ def home():
     return {
         "message": "ClassSync Backend Running"
     }
+
+@app.route("/test-supabase")
+def test_supabase():
+    try:
+        buckets = supabase.storage.list_buckets()
+        return {
+            "success": True,
+            "buckets": [bucket.name for bucket in buckets]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }, 500
 
 
 if __name__ == "__main__":
