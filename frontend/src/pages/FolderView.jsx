@@ -5,15 +5,14 @@ import api from "../services/api";
 import Navbar from "../components/Navbar";
 
 function FolderView() {
-
     const { id } = useParams();
 
     const [files, setFiles] = useState([]);
     const [folders, setFolders] = useState([]);
     const [role, setRole] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-
         const user = JSON.parse(
             localStorage.getItem("user")
         );
@@ -23,9 +22,7 @@ function FolderView() {
         }
 
         const fetchFiles = async () => {
-
             try {
-
                 const token =
                     localStorage.getItem("token");
 
@@ -40,17 +37,13 @@ function FolderView() {
                 );
 
                 setFiles(response.data);
-
             } catch (error) {
-
                 console.error(error);
             }
         };
 
         const fetchChildFolders = async () => {
-
             try {
-
                 const token =
                     localStorage.getItem("token");
 
@@ -65,20 +58,16 @@ function FolderView() {
                 );
 
                 setFolders(response.data);
-
             } catch (error) {
-
                 console.error(error);
             }
         };
 
         fetchFiles();
         fetchChildFolders();
-
     }, [id]);
 
     const deleteFile = async (fileId) => {
-
         if (
             !window.confirm(
                 "Delete this file?"
@@ -88,7 +77,6 @@ function FolderView() {
         }
 
         try {
-
             const token =
                 localStorage.getItem("token");
 
@@ -104,20 +92,17 @@ function FolderView() {
 
             setFiles(
                 files.filter(
-                    file => file.id !== fileId
+                    (file) =>
+                        file.id !== fileId
                 )
             );
-
         } catch (error) {
-
             console.error(error);
-
             alert("Delete failed");
         }
     };
 
     const deleteFolder = async (folderId) => {
-
         if (
             !window.confirm(
                 "Delete this folder?"
@@ -127,7 +112,6 @@ function FolderView() {
         }
 
         try {
-
             const token =
                 localStorage.getItem("token");
 
@@ -143,103 +127,156 @@ function FolderView() {
 
             setFolders(
                 folders.filter(
-                    folder =>
+                    (folder) =>
                         folder.id !== folderId
                 )
             );
-
         } catch (error) {
-
             console.error(error);
-
             alert("Delete failed");
         }
     };
+
+    const filteredFiles = files.filter(
+        (file) =>
+            file.file_name
+                .toLowerCase()
+                .includes(
+                    searchTerm.toLowerCase()
+                )
+    );
 
     return (
         <>
             <Navbar />
 
             <div style={{ padding: "20px" }}>
-
                 <h1>Folder</h1>
 
                 <h2>Folders</h2>
 
-                {folders.map((folder) => (
-                    <div
-                        key={folder.id}
-                        style={{
-                            border: "1px solid #ddd",
-                            padding: "15px",
-                            borderRadius: "10px",
-                            marginBottom: "10px"
-                        }}
-                    >
+                {folders.length === 0 ? (
+                    <p>
+                        📁 No folders found
+                    </p>
+                ) : (
+                    folders.map((folder) => (
                         <div
+                            key={folder.id}
                             style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center"
+                                border: "1px solid #ddd",
+                                padding: "15px",
+                                borderRadius: "10px",
+                                marginBottom: "10px"
                             }}
                         >
-                            <Link to={`/folder/${folder.id}`}>
-                                📁 {folder.folder_name}
-                            </Link>
-
-                            {role === "admin" && (
-                                <button
-                                    onClick={() =>
-                                        deleteFolder(folder.id)
-                                    }
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent:
+                                        "space-between",
+                                    alignItems:
+                                        "center"
+                                }}
+                            >
+                                <Link
+                                    to={`/folder/${folder.id}`}
                                 >
-                                    🗑 Delete
-                                </button>
-                            )}
+                                    📁{" "}
+                                    {
+                                        folder.folder_name
+                                    }
+                                </Link>
+
+                                {role ===
+                                    "admin" && (
+                                    <button
+                                        onClick={() =>
+                                            deleteFolder(
+                                                folder.id
+                                            )
+                                        }
+                                    >
+                                        🗑 Delete
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))
+                )}
 
                 <h2>Files</h2>
 
-                {files.map((file) => (
-                    <div
-                        key={file.id}
-                        style={{
-                            border: "1px solid #ddd",
-                            padding: "15px",
-                            borderRadius: "10px",
-                            marginBottom: "10px"
-                        }}
-                    >
+                <input
+                    type="text"
+                    placeholder="🔍 Search files..."
+                    value={searchTerm}
+                    onChange={(e) =>
+                        setSearchTerm(
+                            e.target.value
+                        )
+                    }
+                    style={{
+                        width: "100%",
+                        padding: "10px",
+                        marginBottom: "15px",
+                        borderRadius: "8px",
+                        border:
+                            "1px solid #ccc"
+                    }}
+                />
+
+                {filteredFiles.length === 0 ? (
+                    <p>
+                        📄 No files found
+                    </p>
+                ) : (
+                    filteredFiles.map((file) => (
                         <div
+                            key={file.id}
                             style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center"
+                                border: "1px solid #ddd",
+                                padding: "15px",
+                                borderRadius: "10px",
+                                marginBottom: "10px"
                             }}
                         >
-                            <a
-                                href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
-                                target="_blank"
-                                rel="noreferrer"
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent:
+                                        "space-between",
+                                    alignItems:
+                                        "center"
+                                }}
                             >
-                                📄 {file.file_name}
-                            </a>
-
-                            {role === "admin" && (
-                                <button
-                                    onClick={() =>
-                                        deleteFile(file.id)
-                                    }
+                                <a
+                                    href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
                                 >
-                                    🗑 Delete
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                                    📄{" "}
+                                    {
+                                        file.file_name
+                                    }
+                                </a>
 
+                                {role ===
+                                    "admin" && (
+                                    <button
+                                        onClick={() =>
+                                            deleteFile(
+                                                file.id
+                                            )
+                                        }
+                                    >
+                                        🗑 Delete
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </>
     );
