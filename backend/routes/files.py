@@ -156,7 +156,6 @@ def view_file(file_id):
     "/download/<int:file_id>",
     methods=["GET"]
 )
-@jwt_required()
 def download_file(file_id):
 
     file = File.query.get(file_id)
