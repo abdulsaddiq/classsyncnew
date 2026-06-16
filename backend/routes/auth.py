@@ -106,7 +106,8 @@ def profile():
         "id": user.id,
         "name": user.name,
         "roll_no": user.roll_no,
-        "role": user.role
+        "role": user.role,
+        "created_at": user.created_at.isoformat()
     })
 
 @auth_bp.route("/users", methods=["GET"])
@@ -129,7 +130,8 @@ def get_users():
             "id": u.id,
             "name": u.name,
             "roll_no": u.roll_no,
-            "role": u.role
+            "role": u.role,
+            "created_at": u.created_at.isoformat()
         }
         for u in users
     ])

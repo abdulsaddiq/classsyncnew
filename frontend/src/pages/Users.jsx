@@ -188,6 +188,11 @@ function Users() {
       alignItems: "center",
       gap: "6px"
     },
+    memberSince: {
+      color: "#94a3b8",
+      fontSize: "12px",
+      marginTop: "6px"
+    },
     roleBadge: {
       display: "inline-flex",
       alignItems: "center",
@@ -379,6 +384,11 @@ function Users() {
                     </div>
                     <p style={styles.userRollNo}>
                       <span>🎫</span> Roll No: {user.roll_no}
+                    </p>
+
+                    <p style={styles.memberSince}>
+                      📅 Member Since:{" "}
+                      {new Date(user.created_at).toLocaleDateString("en-GB")}
                     </p>
                   </div>
 
