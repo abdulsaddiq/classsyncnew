@@ -13,6 +13,13 @@ function FolderView() {
   const [newComments, setNewComments] = useState({});
   const [openComments, setOpenComments] = useState({});
 
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  const canManageContent = ["admin", "moderator", "cr", "lr", "coordinator"].includes(role);
+
+  const canDeleteFile = (file) => {
+    return canManageContent || file.uploaded_by === currentUser?.id;
+  };
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user) setRole(user.role);
@@ -30,7 +37,6 @@ function FolderView() {
         setFiles(filesRes.data);
         setFolders(foldersRes.data);
 
-        // Fetch comments for each file
         const commentsData = {};
         for (const file of filesRes.data) {
           try {
@@ -81,9 +87,7 @@ function FolderView() {
 
   const postComment = async (fileId) => {
     const content = newComments[fileId];
-    if (!content?.trim()) {
-      return;
-    }
+    if (!content?.trim()) return;
 
     try {
       const token = localStorage.getItem("token");
@@ -91,10 +95,7 @@ function FolderView() {
 
       await api.post(
         "/comments",
-        {
-          file_id: fileId,
-          content
-        },
+        { file_id: fileId, content },
         { headers }
       );
 
@@ -113,7 +114,6 @@ function FolderView() {
         [fileId]: ""
       }));
 
-      // Auto-open comments after posting
       setOpenComments(prev => ({
         ...prev,
         [fileId]: true
@@ -152,6 +152,27 @@ function FolderView() {
     return icons[ext] || "📄";
   };
 
+  const getFileType = (fileName) => {
+    const ext = fileName.split('.').pop().toLowerCase();
+    const types = {
+      pdf: "PDF",
+      doc: "DOC",
+      docx: "DOCX",
+      png: "PNG",
+      jpg: "JPG",
+      jpeg: "JPEG",
+      gif: "GIF",
+      ppt: "PPT",
+      pptx: "PPTX",
+      zip: "ZIP",
+      rar: "RAR",
+      mp4: "MP4",
+      mp3: "MP3",
+      txt: "TXT"
+    };
+    return types[ext] || "FILE";
+  };
+
   const filteredFiles = files.filter(file =>
     file.file_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -169,47 +190,104 @@ function FolderView() {
     heading: {
       color: "#ffffff",
       fontSize: "28px",
-      marginBottom: "8px"
+      marginBottom: "6px"
     },
     subheading: {
-      color: "#a0aec0",
-      marginBottom: "30px"
+      color: "#94a3b8",
+      fontSize: "14px",
+      marginBottom: "24px"
     },
     sectionTitle: {
       color: "#ffffff",
       fontSize: "20px",
-      marginBottom: "5px"
+      marginBottom: "4px"
     },
     sectionSubtitle: {
       color: "#94a3b8",
       fontSize: "14px",
-      marginTop: "-10px",
-      marginBottom: "20px"
+      marginTop: "-8px",
+      marginBottom: "16px"
     },
     searchBox: {
-      padding: "8px 12px",
+      padding: "8px 14px",
       borderRadius: "8px",
       border: "1px solid #2d3748",
       backgroundColor: "#1a1f3a",
       color: "#ffffff",
       width: "100%",
-      maxWidth: "400px",
-      outline: "none"
+      maxWidth: "360px",
+      outline: "none",
+      fontSize: "14px"
     },
-    folderItem: {
-      display: "block",
-      padding: "14px",
+    divider: {
+      margin: "32px 0",
+      borderTop: "2px solid #2d3748"
+    },
+    folderCard: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
       background: "#1a1f3a",
       borderRadius: "10px",
       border: "1px solid #2d3748",
+      marginBottom: "8px",
+      padding: "14px 16px",
+      transition: "border-color 0.15s"
+    },
+    folderLink: {
       textDecoration: "none",
       color: "#cbd5e0",
-      transition: "all 0.2s",
-      marginBottom: "8px"
+      flex: 1,
+      fontSize: "15px",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px"
     },
-    divider: {
-      margin: "40px 0",
-      borderTop: "3px solid #2d3748"
+    fileCard: {
+      background: "#1a1f3a",
+      padding: "16px",
+      borderRadius: "10px",
+      border: "1px solid #2d3748",
+      transition: "border-color 0.15s",
+      marginBottom: "10px"
+    },
+    fileHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      flexWrap: "wrap",
+      gap: "12px"
+    },
+    fileInfo: {
+      flex: 1,
+      minWidth: "160px"
+    },
+    fileName: {
+      color: "#a78bfa",
+      fontSize: "16px",
+      fontWeight: "500",
+      margin: "0 0 4px 0",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px"
+    },
+    fileType: {
+      color: "#94a3b8",
+      fontSize: "12px"
+    },
+    fileMetadata: {
+      color: "#64748b",
+      fontSize: "12px",
+      marginTop: "4px",
+      display: "flex",
+      gap: "16px",
+      flexWrap: "wrap"
+    },
+    buttonGroup: {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap",
+      alignItems: "center"
     },
     deleteButton: {
       background: "linear-gradient(135deg, #dc2626, #b91c1c)",
@@ -220,7 +298,7 @@ function FolderView() {
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: "600",
-      transition: "all 0.2s"
+      transition: "opacity 0.15s"
     },
     downloadButton: {
       background: "linear-gradient(135deg, #10b981, #059669)",
@@ -231,23 +309,90 @@ function FolderView() {
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: "600",
-      transition: "all 0.2s",
+      transition: "opacity 0.15s",
+      textDecoration: "none",
+      display: "inline-block"
+    },
+    openButton: {
+      background: "linear-gradient(135deg, #667eea, #764ba2)",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      padding: "6px 14px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "600",
+      transition: "opacity 0.15s",
       textDecoration: "none",
       display: "inline-block"
     },
     commentsButton: {
       background: "transparent",
       border: "1px solid #2d3748",
-      borderRadius: "8px",
-      padding: "6px 12px",
+      borderRadius: "6px",
+      padding: "4px 12px",
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: "500",
-      transition: "all 0.2s",
+      transition: "all 0.15s",
       color: "#cbd5e0",
       display: "flex",
       alignItems: "center",
       gap: "6px"
+    },
+    emptyState: {
+      textAlign: "center",
+      padding: "40px",
+      background: "#1a1f3a",
+      borderRadius: "10px",
+      border: "1px solid #2d3748",
+      color: "#94a3b8"
+    },
+    commentContainer: {
+      marginTop: "16px"
+    },
+    commentItem: {
+      background: "#1a1f3a",
+      padding: "10px 12px",
+      borderRadius: "8px",
+      marginBottom: "8px",
+      border: "1px solid #2d3748"
+    },
+    commentUser: {
+      color: "#a78bfa",
+      fontWeight: "600",
+      fontSize: "13px"
+    },
+    commentContent: {
+      color: "#e2e8f0",
+      marginTop: "4px",
+      fontSize: "14px"
+    },
+    commentTime: {
+      color: "#64748b",
+      fontSize: "11px",
+      marginTop: "4px"
+    },
+    commentInput: {
+      flex: 1,
+      padding: "10px",
+      borderRadius: "8px",
+      border: "1px solid #2d3748",
+      background: "#0f172a",
+      color: "white",
+      outline: "none",
+      fontSize: "14px"
+    },
+    commentPost: {
+      background: "#667eea",
+      color: "white",
+      border: "none",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+      transition: "opacity 0.15s"
     }
   };
 
@@ -255,11 +400,11 @@ function FolderView() {
     if (type === "files") {
       return hasSearch
         ? "🔍 No files match your search"
-        : "📂 This folder is empty.\nUpload notes, PDFs, PPTs or resources.";
+        : "📄 No files available";
     }
     return hasSearch
       ? "🔍 No folders match your search"
-      : "📁 No subfolders found";
+      : "📁 No subfolders available";
   };
 
   return (
@@ -268,13 +413,12 @@ function FolderView() {
       <div style={styles.container}>
         <div style={styles.content}>
           
-          {/* Header */}
           <h1 style={styles.heading}>📂 Folder Contents</h1>
           <p style={styles.subheading}>Browse folders and study materials</p>
 
           {/* Subfolders Section */}
           <div style={{ marginBottom: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "15px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
               <div>
                 <h2 style={styles.sectionTitle}>📁 Folders ({folders.length})</h2>
                 <p style={styles.sectionSubtitle}>Browse subfolders and organized content</p>
@@ -282,38 +426,21 @@ function FolderView() {
             </div>
 
             {folders.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", background: "#1a1f3a", borderRadius: "10px", color: "#a0aec0" }}>
+              <div style={styles.emptyState}>
                 {getEmptyMessage("folders", false)}
               </div>
             ) : (
               folders.map(folder => (
-                <div
-                  key={folder.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    background: "#1a1f3a",
-                    borderRadius: "10px",
-                    border: "1px solid #2d3748",
-                    marginBottom: "8px",
-                    padding: "14px"
-                  }}
-                >
+                <div key={folder.id} style={styles.folderCard}>
                   <Link
                     to={`/folder/${folder.id}`}
-                    style={{
-                      textDecoration: "none",
-                      color: "#cbd5e0",
-                      flex: 1,
-                      transition: "transform 0.2s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = "translateX(5px)"}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = "translateX(0)"}
+                    style={styles.folderLink}
+                    onMouseEnter={(e) => e.currentTarget.style.color = "#a78bfa"}
+                    onMouseLeave={(e) => e.currentTarget.style.color = "#cbd5e0"}
                   >
                     📁 {folder.folder_name}
                   </Link>
-                  {role === "admin" && (
+                  {canManageContent && (
                     <button
                       onClick={() => deleteFolder(folder.id)}
                       style={styles.deleteButton}
@@ -328,15 +455,14 @@ function FolderView() {
             )}
           </div>
 
-          {/* Divider */}
           <div style={styles.divider} />
 
           {/* Files Section */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "15px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
               <div>
                 <h2 style={styles.sectionTitle}>📄 Notes & Files ({filteredFiles.length})</h2>
-                <p style={styles.sectionSubtitle}>Study materials, PDFs and resources</p>
+                <p style={styles.sectionSubtitle}>{filteredFiles.length} resources available</p>
               </div>
               <input
                 type="text"
@@ -344,63 +470,55 @@ function FolderView() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={styles.searchBox}
+                onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                onBlur={(e) => e.currentTarget.style.borderColor = "#2d3748"}
               />
             </div>
 
             {filteredFiles.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "50px", background: "rgba(167, 139, 250, 0.05)", borderRadius: "12px", border: "2px solid #2d3748", color: "#a0aec0", whiteSpace: "pre-line" }}>
+              <div style={styles.emptyState}>
                 {getEmptyMessage("files", searchTerm.length > 0)}
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "900px", margin: "0 auto" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {filteredFiles.map(file => {
                   const fileIcon = getFileIcon(file.file_name);
+                  const fileType = getFileType(file.file_name);
                   const isOpen = openComments[file.id];
                   const commentCount = comments[file.id]?.length || 0;
                   
                   return (
                     <div
                       key={file.id}
-                      style={{
-                        background: "rgba(167, 139, 250, 0.05)",
-                        padding: "18px",
-                        borderRadius: "12px",
-                        border: "2px solid #2d3748",
-                        transition: "all 0.2s ease",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-3px)";
-                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.3)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-                      }}
+                      style={styles.fileCard}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
-                            <h3 style={{ color: "#a78bfa", margin: 0, fontSize: "18px" }}>
-                              {fileIcon} {file.file_name}
-                            </h3>
+                      <div style={styles.fileHeader}>
+                        <div style={styles.fileInfo}>
+                          <div style={styles.fileName}>
+                            <span>{fileIcon}</span>
+                            <span>{file.file_name}</span>
+                          </div>
+                          <div style={styles.fileType}>{fileType}</div>
+                          <div style={styles.fileMetadata}>
+                            {file.uploaded_by_name && (
+                              <span>Uploaded by: {file.uploaded_by_name}</span>
+                            )}
+                            {file.uploaded_by_role && (
+                              <span>Role: {file.uploaded_by_role}</span>
+                            )}
+                            {file.uploaded_at && (
+                              <span>Uploaded: {new Date(file.uploaded_at).toLocaleString()}</span>
+                            )}
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: "10px" }}>
+                        <div style={styles.buttonGroup}>
                           <a
                             href={`${import.meta.env.VITE_API_URL}/files/view/${file.id}`}
                             target="_blank"
                             rel="noreferrer"
-                            style={{
-                              background: "linear-gradient(135deg, #667eea, #764ba2)",
-                              color: "white",
-                              textDecoration: "none",
-                              padding: "8px 16px",
-                              borderRadius: "8px",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              transition: "all 0.2s"
-                            }}
+                            style={styles.openButton}
                             onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
                             onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                           >
@@ -416,7 +534,7 @@ function FolderView() {
                           >
                             ⬇️ Download
                           </a>
-                          {role === "admin" && (
+                          {canDeleteFile(file) && (
                             <button
                               onClick={() => deleteFile(file.id)}
                               style={styles.deleteButton}
@@ -429,8 +547,7 @@ function FolderView() {
                         </div>
                       </div>
 
-                      {/* Comments Toggle Button */}
-                      <hr style={{ borderColor: "#2d3748", margin: "16px 0 12px 0" }} />
+                      <hr style={{ borderColor: "#2d3748", margin: "14px 0 10px 0" }} />
                       
                       <button
                         onClick={() => toggleComments(file.id)}
@@ -447,107 +564,54 @@ function FolderView() {
                         {isOpen ? "▼" : "▶"} 💬 Comments ({commentCount})
                       </button>
 
-                      {/* Collapsible Comments Section */}
                       {isOpen && (
-                        <>
-                          <div style={{ marginTop: "16px" }}>
-                            {commentCount > 0 ? (
-                              comments[file.id].map((comment) => (
-                                <div
-                                  key={comment.id}
-                                  style={{
-                                    background: "#1a1f3a",
-                                    padding: "10px",
-                                    borderRadius: "8px",
-                                    marginBottom: "8px"
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      color: "#a78bfa",
-                                      fontWeight: "bold",
-                                      fontSize: "13px"
-                                    }}
-                                  >
-                                    {comment.username}
-                                  </div>
-                                  <div
-                                    style={{
-                                      color: "#e2e8f0",
-                                      marginTop: "4px"
-                                    }}
-                                  >
-                                    {comment.content}
-                                  </div>
-                                  <div
-                                    style={{
-                                      color: "#94a3b8",
-                                      fontSize: "11px",
-                                      marginTop: "4px"
-                                    }}
-                                  >
-                                    {comment.created_at}
-                                  </div>
+                        <div style={styles.commentContainer}>
+                          {commentCount > 0 ? (
+                            comments[file.id].map((comment) => (
+                              <div key={comment.id} style={styles.commentItem}>
+                                <div style={styles.commentUser}>{comment.username}</div>
+                                <div style={styles.commentContent}>{comment.content}</div>
+                                <div style={styles.commentTime}>
+                                  {new Date(comment.created_at).toLocaleString()}
                                 </div>
-                              ))
-                            ) : (
-                              <p style={{ color: "#94a3b8", marginBottom: "12px" }}>
-                                Be the first to comment 💬
-                              </p>
-                            )}
+                              </div>
+                            ))
+                          ) : (
+                            <p style={{ color: "#94a3b8", marginBottom: "12px" }}>
+                              Be the first to comment 💬
+                            </p>
+                          )}
 
-                            {/* Add Comment Input */}
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "10px",
-                                marginTop: "12px"
-                              }}
-                            >
-                              <input
-                                type="text"
-                                placeholder="Write a comment..."
-                                value={newComments[file.id] || ""}
-                                onChange={(e) =>
-                                  setNewComments(prev => ({
-                                    ...prev,
-                                    [file.id]: e.target.value
-                                  }))
+                          <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+                            <input
+                              type="text"
+                              placeholder="Write a comment..."
+                              value={newComments[file.id] || ""}
+                              onChange={(e) =>
+                                setNewComments(prev => ({
+                                  ...prev,
+                                  [file.id]: e.target.value
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  postComment(file.id);
                                 }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    postComment(file.id);
-                                  }
-                                }}
-                                style={{
-                                  flex: 1,
-                                  padding: "10px",
-                                  borderRadius: "8px",
-                                  border: "1px solid #2d3748",
-                                  background: "#1a1f3a",
-                                  color: "white",
-                                  outline: "none"
-                                }}
-                              />
-                              <button
-                                onClick={() => postComment(file.id)}
-                                style={{
-                                  background: "#667eea",
-                                  color: "white",
-                                  border: "none",
-                                  padding: "10px 16px",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  transition: "all 0.2s"
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
-                                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-                              >
-                                Post
-                              </button>
-                            </div>
+                              }}
+                              style={styles.commentInput}
+                              onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                              onBlur={(e) => e.currentTarget.style.borderColor = "#2d3748"}
+                            />
+                            <button
+                              onClick={() => postComment(file.id)}
+                              style={styles.commentPost}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                            >
+                              Post
+                            </button>
                           </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   );

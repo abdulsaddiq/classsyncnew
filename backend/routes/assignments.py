@@ -83,6 +83,22 @@ def get_assignments():
                 ).name
                 if assignment.created_by
                 else "Unknown"
+            ),
+
+            "created_by_id": (
+                User.query.get(
+                    assignment.created_by
+                ).id
+                if assignment.created_by
+                else None
+            ),
+
+            "created_by_role": (
+                    User.query.get(
+                    assignment.created_by
+                ).role
+                if assignment.created_by
+                else "student"
             )
         }
         for assignment in assignments
@@ -117,7 +133,79 @@ def get_subject_assignments(subject_id):
                 ).name
                 if assignment.created_by
                 else "Unknown"
+            ),
+
+            "created_by_id": (
+                User.query.get(
+                    assignment.created_by
+                ).id
+                if assignment.created_by
+                else None
+            ),
+
+            "created_by_role": (
+                    User.query.get(
+                    assignment.created_by
+                ).role
+                if assignment.created_by
+                else "student"
             )
         }
         for assignment in assignments
     ])
+
+@assignments_bp.route(
+    "/<int:assignment_id>",
+    methods=["DELETE"]
+)
+@jwt_required()
+def delete_assignment(assignment_id):
+
+    user_id = get_jwt_identity()
+
+    user = User.query.get(user_id)
+
+    assignment = Assignment.query.get(
+        assignment_id
+    )
+
+    if not assignment:
+        return jsonify({
+            "error": "Assignment not found"
+        }), 404
+    
+    creator = User.query.get(
+    assignment.created_by
+    )
+
+    role_rank = {
+        "admin": 5,
+        "moderator": 4,
+        "cr": 3,
+        "lr": 3,
+        "coordinator": 2,
+        "student": 1
+    }
+
+    if assignment.created_by == user.id:
+        pass
+
+    elif (
+        creator and
+        role_rank.get(user.role, 0)
+        > role_rank.get(creator.role, 0)
+    ):
+        pass
+
+    else:
+        return jsonify({
+            "error": "Permission denied"
+        }), 403
+    
+    db.session.delete(assignment)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Assignment deleted"
+    }), 200

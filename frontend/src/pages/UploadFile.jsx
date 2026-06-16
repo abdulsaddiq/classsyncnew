@@ -27,7 +27,11 @@ function UploadFile() {
   }, []);
 
   useEffect(() => {
-    if (!subjectId) return;
+    if (!subjectId) {
+      setFolders([]);
+      setFolderId("");
+      return;
+    }
     const fetchFolders = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -35,6 +39,7 @@ function UploadFile() {
           headers: { Authorization: `Bearer ${token}` }
         });
         setFolders(response.data);
+        setFolderId("");
       } catch (error) {
         console.error(error);
       }
@@ -97,6 +102,18 @@ function UploadFile() {
     if (!folderId) {
       alert("Please select a folder");
       return;
+    }
+
+    // Check for large files (50MB)
+    const largeFiles = files.filter(file => file.size > 50 * 1024 * 1024);
+    if (largeFiles.length > 0) {
+      const names = largeFiles.map(f => f.name).join(", ");
+      const confirmed = window.confirm(
+        `⚠️ The following file(s) are larger than 50MB:\n\n${names}\n\nUploading large files may take time. Continue?`
+      );
+      if (!confirmed) {
+        return;
+      }
     }
 
     setUploading(true);
@@ -196,7 +213,7 @@ function UploadFile() {
       color: "#ffffff",
       fontSize: "14px",
       outline: "none",
-      transition: "all 0.2s",
+      transition: "border-color 0.15s",
       cursor: "pointer",
       boxSizing: "border-box"
     },
@@ -221,7 +238,7 @@ function UploadFile() {
       fontSize: "16px",
       fontWeight: "600",
       cursor: "pointer",
-      transition: "all 0.2s"
+      transition: "opacity 0.15s"
     },
     buttonDisabled: {
       opacity: 0.6,
@@ -241,7 +258,7 @@ function UploadFile() {
       justifyContent: "space-between",
       alignItems: "center",
       border: "1px solid #2d3748",
-      transition: "all 0.2s"
+      transition: "border-color 0.15s"
     },
     fileInfo: {
       flex: 1,
@@ -280,7 +297,7 @@ function UploadFile() {
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: "600",
-      transition: "all 0.2s"
+      transition: "opacity 0.15s"
     },
     progressBar: {
       width: "100%",
@@ -328,6 +345,13 @@ function UploadFile() {
       color: "#94a3b8",
       fontSize: "13px",
       margin: 0
+    },
+    noFoldersMessage: {
+      color: "#94a3b8",
+      fontSize: "13px",
+      padding: "8px 12px",
+      textAlign: "center",
+      fontStyle: "italic"
     }
   };
 
@@ -345,7 +369,10 @@ function UploadFile() {
                 <label style={styles.label}>📚 Select Subject</label>
                 <select
                   value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
+                  onChange={(e) => {
+                    setSubjectId(e.target.value);
+                    setFolderId("");
+                  }}
                   style={styles.select}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "#667eea")}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "#2d3748")}
@@ -380,6 +407,11 @@ function UploadFile() {
                     </option>
                   ))}
                 </select>
+                {subjectId && folders.length === 0 && (
+                  <div style={styles.noFoldersMessage}>
+                    No folders available. Ask a CR, LR, Moderator or Admin to create one.
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: "20px" }}>
@@ -466,12 +498,10 @@ function UploadFile() {
                 onMouseEnter={(e) => {
                   if (!uploading && files.length > 0 && folderId) {
                     e.currentTarget.style.opacity = "0.85";
-                    e.currentTarget.style.transform = "translateY(-2px)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.opacity = "1";
-                  e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
                 {uploading ? "⏳ Uploading..." : `🚀 Upload ${files.length} File(s)`}

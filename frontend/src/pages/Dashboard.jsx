@@ -5,22 +5,37 @@ import api from "../services/api";
 import Navbar from "../components/Navbar";
 
 import {
-    FaBook,
     FaFolder,
     FaFile,
     FaUsers,
     FaBullhorn,
     FaFire,
-    FaArrowRight
+    FaArrowRight,
+    FaPlus,
+    FaUpload,
+    FaClipboardList,
+    FaBook,
+    FaCalendarAlt
 } from "react-icons/fa";
 
 function Dashboard() {
     const [user, setUser] = useState(null);
-    const [subjects, setSubjects] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [stats, setStats] = useState(null);
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const getRoleDisplay = (role) => {
+        const roleMap = {
+            admin: { label: "ADMIN", icon: "👑", color: "#f472b6", bg: "rgba(236, 72, 153, 0.2)" },
+            moderator: { label: "MODERATOR", icon: "🛡", color: "#c084fc", bg: "rgba(168, 85, 247, 0.2)" },
+            cr: { label: "CR", icon: "🎓", color: "#60a5fa", bg: "rgba(59, 130, 246, 0.2)" },
+            lr: { label: "LR", icon: "🌸", color: "#f9a8d4", bg: "rgba(244, 114, 182, 0.2)" },
+            coordinator: { label: "COORDINATOR", icon: "📚", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.2)" },
+            student: { label: "STUDENT", icon: "👤", color: "#34d399", bg: "rgba(16, 185, 129, 0.2)" }
+        };
+        return roleMap[role] || roleMap.student;
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -28,41 +43,27 @@ function Dashboard() {
 
         const initializeDashboard = async () => {
             try {
-                // Fetch profile first
                 const profileResponse = await api.get("/auth/profile", { headers });
                 const userData = profileResponse.data;
                 setUser(userData);
 
-                // Fetch data that's available to everyone
                 await Promise.all([
-                    fetchSubjects(headers),
                     fetchAnnouncements(headers),
                     fetchActivities(headers)
                 ]);
 
-                // Only fetch stats if user is admin
                 if (userData.role === "admin") {
                     await fetchStats(headers);
                 }
             } catch (error) {
                 console.error("Error initializing dashboard:", error);
                 if (error.response?.status === 401) {
-                    // Token expired or invalid
                     localStorage.removeItem("token");
                     localStorage.removeItem("user");
                     window.location.href = "/";
                 }
             } finally {
                 setLoading(false);
-            }
-        };
-
-        const fetchSubjects = async (headers) => {
-            try {
-                const response = await api.get("/subjects", { headers });
-                setSubjects(response.data);
-            } catch (error) {
-                console.error("Error fetching subjects:", error);
             }
         };
 
@@ -107,25 +108,14 @@ function Dashboard() {
                 color: "#ffffff"
             }}>
                 <div style={{ textAlign: "center" }}>
-                    <div style={{
-                        width: "40px",
-                        height: "40px",
-                        border: "3px solid #2d3748",
-                        borderTopColor: "#667eea",
-                        borderRadius: "50%",
-                        animation: "spin 1s linear infinite",
-                        margin: "0 auto 20px"
-                    }}></div>
-                    <h2>Loading Dashboard...</h2>
-                    <style>{`
-                        @keyframes spin {
-                            to { transform: rotate(360deg); }
-                        }
-                    `}</style>
+                    <div style={{ fontSize: "40px", marginBottom: "16px" }}>📚</div>
+                    <h2 style={{ fontWeight: "400", color: "#94a3b8" }}>Loading Dashboard...</h2>
                 </div>
             </div>
         );
     }
+
+    const roleInfo = getRoleDisplay(user?.role);
 
     return (
         <div style={{
@@ -142,7 +132,7 @@ function Dashboard() {
                 width: "100%",
                 boxSizing: "border-box"
             }}>
-                {/* Welcome Card - Enhanced for mobile */}
+                {/* Welcome Card */}
                 <div style={{
                     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                     padding: "clamp(20px, 5vw, 30px)",
@@ -169,25 +159,27 @@ function Dashboard() {
                             <div style={{
                                 display: "flex",
                                 gap: "10px",
-                                flexWrap: "wrap"
+                                flexWrap: "wrap",
+                                alignItems: "center"
                             }}>
                                 <span style={{
                                     padding: "4px 12px",
-                                    backgroundColor: "rgba(255,255,255,0.2)",
                                     borderRadius: "20px",
                                     fontSize: "12px",
-                                    color: "#ffffff"
+                                    color: "#ffffff",
+                                    backgroundColor: "rgba(255,255,255,0.2)"
                                 }}>
-                                    Role: {user?.role}
+                                    Roll No: {user?.roll_no}
                                 </span>
                                 <span style={{
                                     padding: "4px 12px",
-                                    backgroundColor: "rgba(255,255,255,0.2)",
                                     borderRadius: "20px",
                                     fontSize: "12px",
-                                    color: "#ffffff"
+                                    fontWeight: "600",
+                                    backgroundColor: roleInfo.bg,
+                                    color: roleInfo.color
                                 }}>
-                                    Roll No: {user?.roll_no}
+                                    {roleInfo.icon} {roleInfo.label}
                                 </span>
                             </div>
                         </div>
@@ -199,12 +191,85 @@ function Dashboard() {
                     </div>
                 </div>
 
-                {/* Stats Grid - Responsive */}
+                {/* Quick Actions */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                    gap: "12px",
+                    marginBottom: "30px"
+                }}>
+                    <Link to="/create-announcement" style={{
+                        textDecoration: "none",
+                        background: "#1a1f3a",
+                        padding: "14px",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaPlus style={{ color: "#f59e0b", fontSize: "16px" }} />
+                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Announcement</span>
+                    </Link>
+                    <Link to="/create-assignment" style={{
+                        textDecoration: "none",
+                        background: "#1a1f3a",
+                        padding: "14px",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaClipboardList style={{ color: "#a78bfa", fontSize: "16px" }} />
+                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Assignment</span>
+                    </Link>
+                    <Link to="/upload-file" style={{
+                        textDecoration: "none",
+                        background: "#1a1f3a",
+                        padding: "14px",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#10b981"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaUpload style={{ color: "#10b981", fontSize: "16px" }} />
+                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Upload Notes</span>
+                    </Link>
+                    <Link to="/subjects" style={{
+                        textDecoration: "none",
+                        background: "#1a1f3a",
+                        padding: "14px",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaBook style={{ color: "#667eea", fontSize: "16px" }} />
+                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Browse Subjects</span>
+                    </Link>
+                </div>
+
+                {/* Stats Grid */}
                 {stats && (
                     <div style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                        gap: "15px",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                        gap: "12px",
                         marginBottom: "30px"
                     }}>
                         {[
@@ -217,21 +282,14 @@ function Dashboard() {
                             <div
                                 key={index}
                                 style={{
-                                    background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
-                                    padding: "clamp(15px, 4vw, 20px)",
-                                    borderRadius: "15px",
+                                    background: "#1a1f3a",
+                                    padding: "clamp(14px, 4vw, 18px)",
+                                    borderRadius: "12px",
                                     border: "1px solid #2d3748",
-                                    transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                                    cursor: "pointer"
+                                    transition: "border-color 0.15s"
                                 }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-5px)";
-                                    e.currentTarget.style.boxShadow = "0 10px 25px rgba(0,0,0,0.3)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.borderColor = stat.color}
+                                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                             >
                                 <div style={{
                                     display: "flex",
@@ -241,23 +299,24 @@ function Dashboard() {
                                 }}>
                                     <div style={{ flex: 1 }}>
                                         <p style={{
-                                            margin: "0 0 8px 0",
-                                            color: "#a0aec0",
-                                            fontSize: "clamp(11px, 3vw, 14px)",
+                                            margin: "0 0 6px 0",
+                                            color: "#94a3b8",
+                                            fontSize: "clamp(11px, 3vw, 13px)",
                                             fontWeight: "500"
                                         }}>{stat.label}</p>
                                         <h2 style={{
                                             margin: 0,
-                                            fontSize: "clamp(24px, 6vw, 36px)",
-                                            color: stat.color
+                                            fontSize: "clamp(24px, 6vw, 32px)",
+                                            color: "#ffffff",
+                                            fontWeight: "600"
                                         }}>
                                             {stat.value}
                                         </h2>
                                     </div>
                                     <stat.icon style={{
-                                        fontSize: "clamp(28px, 7vw, 40px)",
+                                        fontSize: "clamp(24px, 6vw, 34px)",
                                         color: stat.color,
-                                        opacity: 0.7
+                                        opacity: 0.6
                                     }} />
                                 </div>
                             </div>
@@ -265,14 +324,14 @@ function Dashboard() {
                     </div>
                 )}
 
-                {/* Two Column Layout for Recent Activity and Announcements */}
+                {/* Two Column Layout */}
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
                     gap: "clamp(20px, 4vw, 30px)",
                     marginBottom: "30px"
                 }}>
-                    {/* Recent Activity Section */}
+                    {/* Recent Activity */}
                     <div>
                         <div style={{
                             display: "flex",
@@ -281,13 +340,14 @@ function Dashboard() {
                             marginBottom: "15px",
                             flexWrap: "wrap"
                         }}>
-                            <FaFire style={{ color: "#f97316", fontSize: "clamp(20px, 5vw, 24px)" }} />
+                            <FaFire style={{ color: "#f97316", fontSize: "clamp(18px, 4vw, 22px)" }} />
                             <h2 style={{
                                 color: "#ffffff",
                                 margin: 0,
-                                fontSize: "clamp(18px, 5vw, 24px)"
+                                fontSize: "clamp(18px, 4vw, 22px)",
+                                fontWeight: "500"
                             }}>
-                                Recent Activity
+                                Recent Activity ({activities.length})
                             </h2>
                             <div style={{
                                 height: "2px",
@@ -299,7 +359,7 @@ function Dashboard() {
                         <div style={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: "10px",
+                            gap: "8px",
                             maxHeight: "400px",
                             overflowY: "auto"
                         }}>
@@ -308,23 +368,17 @@ function Dashboard() {
                                     <div
                                         key={activity.id}
                                         style={{
-                                            background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
-                                            padding: "clamp(12px, 3vw, 16px)",
-                                            borderRadius: "12px",
+                                            background: "#1a1f3a",
+                                            padding: "clamp(12px, 3vw, 14px)",
+                                            borderRadius: "10px",
                                             border: "1px solid #2d3748",
-                                            transition: "all 0.3s ease",
                                             display: "flex",
                                             alignItems: "flex-start",
-                                            gap: "10px"
+                                            gap: "10px",
+                                            transition: "border-color 0.15s"
                                         }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = "translateX(5px)";
-                                            e.currentTarget.style.borderColor = "#f97316";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = "translateX(0)";
-                                            e.currentTarget.style.borderColor = "#2d3748";
-                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f97316"}
+                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                                     >
                                         <div style={{
                                             width: "6px",
@@ -332,8 +386,7 @@ function Dashboard() {
                                             borderRadius: "50%",
                                             backgroundColor: "#f97316",
                                             marginTop: "8px",
-                                            flexShrink: 0,
-                                            animation: "pulse 2s infinite"
+                                            flexShrink: 0
                                         }}></div>
                                         <p style={{
                                             margin: 0,
@@ -350,10 +403,11 @@ function Dashboard() {
                                 <div style={{
                                     background: "#1a1f3a",
                                     padding: "clamp(30px, 8vw, 40px)",
-                                    borderRadius: "15px",
+                                    borderRadius: "12px",
                                     textAlign: "center",
-                                    color: "#a0aec0",
-                                    fontSize: "clamp(12px, 3.5vw, 14px)"
+                                    color: "#94a3b8",
+                                    fontSize: "clamp(12px, 3.5vw, 14px)",
+                                    border: "1px solid #2d3748"
                                 }}>
                                     No recent activities yet
                                 </div>
@@ -361,7 +415,7 @@ function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Announcements Section */}
+                    {/* Announcements */}
                     <div>
                         <div style={{
                             display: "flex",
@@ -373,9 +427,10 @@ function Dashboard() {
                             <h2 style={{
                                 color: "#ffffff",
                                 margin: 0,
-                                fontSize: "clamp(18px, 5vw, 24px)"
+                                fontSize: "clamp(18px, 4vw, 22px)",
+                                fontWeight: "500"
                             }}>
-                                📢 Announcements
+                                📢 Announcements ({announcements.length})
                             </h2>
                             <div style={{
                                 height: "2px",
@@ -387,57 +442,84 @@ function Dashboard() {
                         <div style={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: "12px",
+                            gap: "10px",
                             maxHeight: "400px",
                             overflowY: "auto"
                         }}>
-                            {announcements.slice(0, 3).map((announcement) => (
-                                <div
-                                    key={announcement.id}
-                                    style={{
-                                        background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
-                                        padding: "clamp(15px, 4vw, 20px)",
-                                        borderRadius: "15px",
-                                        border: "1px solid #2d3748",
-                                        transition: "transform 0.3s ease",
-                                        cursor: "pointer"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = "translateX(5px)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = "translateX(0)";
-                                    }}
-                                >
-                                    <h3 style={{
-                                        margin: "0 0 10px 0",
-                                        color: "#667eea",
-                                        fontSize: "clamp(14px, 4vw, 18px)",
-                                        wordBreak: "break-word"
-                                    }}>
-                                        {announcement.title}
-                                    </h3>
-                                    <p style={{
-                                        margin: 0,
-                                        color: "#cbd5e0",
-                                        lineHeight: "1.6",
-                                        fontSize: "clamp(12px, 3.5vw, 14px)",
-                                        wordBreak: "break-word"
-                                    }}>
-                                        {announcement.content.length > 150 
-                                            ? announcement.content.substring(0, 150) + "..." 
-                                            : announcement.content}
-                                    </p>
-                                </div>
-                            ))}
+                            {announcements.slice(0, 3).map((announcement) => {
+                                const creatorRole = getRoleDisplay(announcement.created_by_role);
+                                
+                                return (
+                                    <div
+                                        key={announcement.id}
+                                        style={{
+                                            background: "#1a1f3a",
+                                            padding: "clamp(14px, 4vw, 18px)",
+                                            borderRadius: "12px",
+                                            border: "1px solid #2d3748",
+                                            transition: "border-color 0.15s"
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
+                                    >
+                                        <h3 style={{
+                                            margin: "0 0 6px 0",
+                                            color: "#667eea",
+                                            fontSize: "clamp(14px, 4vw, 17px)",
+                                            fontWeight: "500",
+                                            wordBreak: "break-word"
+                                        }}>
+                                            {announcement.title}
+                                        </h3>
+                                        <div style={{
+                                            display: "flex",
+                                            gap: "8px",
+                                            marginBottom: "8px",
+                                            flexWrap: "wrap",
+                                            alignItems: "center"
+                                        }}>
+                                            <span style={{
+                                                color: "#94a3b8",
+                                                fontSize: "12px"
+                                            }}>
+                                                By {announcement.created_by || "Admin"}
+                                            </span>
+                                            {announcement.created_by_role && (
+                                                <span style={{
+                                                    padding: "2px 8px",
+                                                    borderRadius: "12px",
+                                                    fontSize: "10px",
+                                                    fontWeight: "600",
+                                                    backgroundColor: creatorRole.bg,
+                                                    color: creatorRole.color
+                                                }}>
+                                                    {creatorRole.icon} {creatorRole.label}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p style={{
+                                            margin: 0,
+                                            color: "#cbd5e0",
+                                            lineHeight: "1.5",
+                                            fontSize: "clamp(12px, 3.5vw, 14px)",
+                                            wordBreak: "break-word"
+                                        }}>
+                                            {announcement.content.length > 120 
+                                                ? announcement.content.substring(0, 120) + "..." 
+                                                : announcement.content}
+                                        </p>
+                                    </div>
+                                );
+                            })}
                             {announcements.length === 0 && (
                                 <div style={{
                                     background: "#1a1f3a",
                                     padding: "clamp(30px, 8vw, 40px)",
-                                    borderRadius: "15px",
+                                    borderRadius: "12px",
                                     textAlign: "center",
-                                    color: "#a0aec0",
-                                    fontSize: "clamp(12px, 3.5vw, 14px)"
+                                    color: "#94a3b8",
+                                    fontSize: "clamp(12px, 3.5vw, 14px)",
+                                    border: "1px solid #2d3748"
                                 }}>
                                     No announcements yet
                                 </div>
@@ -451,11 +533,11 @@ function Dashboard() {
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    gap: "5px",
-                                    transition: "gap 0.3s ease"
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                                onMouseLeave={(e) => e.currentTarget.style.gap = "5px"}>
+                                    gap: "6px",
+                                    padding: "8px",
+                                    borderRadius: "8px",
+                                    background: "rgba(102, 126, 234, 0.05)"
+                                }}>
                                     View All Announcements <FaArrowRight style={{ fontSize: "12px" }} />
                                 </Link>
                             )}
@@ -463,8 +545,8 @@ function Dashboard() {
                     </div>
                 </div>
 
-                {/* Subjects Section */}
-                <div>
+                {/* Timetable Section */}
+                <div style={{ marginBottom: "30px" }}>
                     <div style={{
                         display: "flex",
                         alignItems: "center",
@@ -472,136 +554,66 @@ function Dashboard() {
                         marginBottom: "15px",
                         flexWrap: "wrap"
                     }}>
+                        <FaCalendarAlt style={{ color: "#a78bfa", fontSize: "clamp(18px, 4vw, 22px)" }} />
                         <h2 style={{
                             color: "#ffffff",
                             margin: 0,
-                            fontSize: "clamp(18px, 5vw, 24px)"
+                            fontSize: "clamp(18px, 4vw, 22px)",
+                            fontWeight: "500"
                         }}>
-                            📚 Your Subjects
+                            Today's Schedule
                         </h2>
                         <div style={{
                             height: "2px",
                             flex: 1,
-                            background: "linear-gradient(90deg, #667eea, transparent)"
+                            background: "linear-gradient(90deg, #a78bfa, transparent)"
                         }}></div>
                     </div>
 
                     <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                        gap: "12px"
+                        background: "#1a1f3a",
+                        padding: "clamp(30px, 5vw, 40px)",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        textAlign: "center"
                     }}>
-                        {subjects.map((subject) => (
-                            <Link
-                                key={subject.id}
-                                to={`/subject/${subject.id}`}
-                                style={{ textDecoration: "none" }}
-                            >
-                                <div
-                                    style={{
-                                        background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
-                                        padding: "clamp(15px, 4vw, 20px)",
-                                        borderRadius: "15px",
-                                        border: "1px solid #2d3748",
-                                        cursor: "pointer",
-                                        transition: "all 0.3s ease",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "12px"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = "translateY(-5px)";
-                                        e.currentTarget.style.borderColor = "#667eea";
-                                        e.currentTarget.style.boxShadow = "0 10px 25px rgba(102, 126, 234, 0.2)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = "translateY(0)";
-                                        e.currentTarget.style.borderColor = "#2d3748";
-                                        e.currentTarget.style.boxShadow = "none";
-                                    }}
-                                >
-                                    <div style={{
-                                        fontSize: "clamp(20px, 5vw, 28px)",
-                                        flexShrink: 0
-                                    }}>
-                                        📚
-                                    </div>
-                                    <span style={{
-                                        color: "#cbd5e0",
-                                        fontSize: "clamp(13px, 3.5vw, 16px)",
-                                        fontWeight: "500",
-                                        wordBreak: "break-word",
-                                        flex: 1
-                                    }}>
-                                        {subject.name}
-                                    </span>
-                                    <FaArrowRight style={{
-                                        color: "#667eea",
-                                        fontSize: "clamp(12px, 3vw, 14px)",
-                                        opacity: 0,
-                                        transition: "opacity 0.3s ease",
-                                        flexShrink: 0
-                                    }} />
-                                </div>
-                            </Link>
-                        ))}
-                        {subjects.length === 0 && (
-                            <div style={{
-                                background: "#1a1f3a",
-                                padding: "clamp(30px, 8vw, 40px)",
-                                borderRadius: "15px",
-                                textAlign: "center",
-                                color: "#a0aec0",
-                                fontSize: "clamp(12px, 3.5vw, 14px)",
-                                gridColumn: "1/-1"
-                            }}>
-                                No subjects available
-                            </div>
-                        )}
+                        <div style={{ fontSize: "32px", marginBottom: "12px" }}>📅</div>
+                        <h3 style={{ color: "#ffffff", marginBottom: "8px", fontWeight: "500" }}>No Timetable Available</h3>
+                        <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
+                            Timetable integration will appear here when configured.
+                        </p>
                     </div>
                 </div>
             </div>
 
             <style>
                 {`
-                    @keyframes pulse {
-                        0%, 100% { opacity: 1; }
-                        50% { opacity: 0.5; }
-                    }
-                    
                     /* Custom scrollbar */
                     ::-webkit-scrollbar {
-                        width: 8px;
+                        width: 6px;
                     }
                     
                     ::-webkit-scrollbar-track {
                         background: #1a1f3a;
-                        border-radius: 10px;
+                        borderRadius: 8px;
                     }
                     
                     ::-webkit-scrollbar-thumb {
                         background: #667eea;
-                        border-radius: 10px;
+                        borderRadius: 8px;
                     }
                     
                     ::-webkit-scrollbar-thumb:hover {
                         background: #764ba2;
                     }
                     
-                    /* Mobile optimizations */
                     @media (max-width: 768px) {
-                        .dashboard-container {
-                            padding: 10px !important;
-                        }
-                        
-                        /* Better touch targets for mobile */
                         a, button, [role="button"] {
                             touch-action: manipulation;
                         }
                     }
                     
                     @media (max-width: 480px) {
-                        /* Adjust grid for very small screens */
                         div[style*="grid-template-columns"] {
                             grid-template-columns: 1fr !important;
                         }

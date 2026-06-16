@@ -8,6 +8,29 @@ function Announcements() {
   const [deleting, setDeleting] = useState(null);
   const user = JSON.parse(localStorage.getItem("user"));
 
+  const ROLE_LEVELS = {
+    student: 1,
+    coordinator: 2,
+    cr: 3,
+    lr: 3,
+    moderator: 4,
+    admin: 5
+  };
+
+  const canDeleteAnnouncement = (announcement) => {
+    if (!user) return false;
+
+    // User can delete their own announcement
+    if (announcement.created_by_id === user.id) {
+      return true;
+    }
+
+    // User can delete if their role is higher than creator's role
+    return (
+      ROLE_LEVELS[user.role] > ROLE_LEVELS[announcement.created_by_role]
+    );
+  };
+
   useEffect(() => {
     fetchAnnouncements();
   }, []);
@@ -115,8 +138,7 @@ function Announcements() {
       marginBottom: "20px",
       border: "1px solid #2d3748",
       borderLeft: "4px solid #f59e0b",
-      transition: "all 0.3s ease",
-      cursor: "pointer"
+      transition: "border-color 0.15s"
     },
     announcementHeader: {
       display: "flex",
@@ -164,6 +186,12 @@ function Announcements() {
       alignItems: "center",
       gap: "6px"
     },
+    creatorRole: {
+      color: "#a78bfa",
+      fontSize: "11px",
+      fontWeight: "600",
+      marginLeft: "4px"
+    },
     announcementContent: {
       color: "#cbd5e0",
       fontSize: "15px",
@@ -179,7 +207,7 @@ function Announcements() {
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: "600",
-      transition: "all 0.2s"
+      transition: "opacity 0.15s"
     },
     deleteButtonDisabled: {
       opacity: 0.6,
@@ -216,15 +244,6 @@ function Announcements() {
       color: "#94a3b8",
       fontSize: "14px",
       margin: 0
-    },
-    spinner: {
-      width: "40px",
-      height: "40px",
-      border: "3px solid #2d3748",
-      borderTopColor: "#f59e0b",
-      borderRadius: "50%",
-      animation: "spin 1s linear infinite",
-      margin: "0 auto 16px"
     }
   };
 
@@ -235,13 +254,7 @@ function Announcements() {
         <div style={styles.container}>
           <div style={styles.content}>
             <div style={styles.loadingContainer}>
-              <div style={styles.spinner}></div>
               <p style={styles.loadingText}>Loading announcements...</p>
-              <style>{`
-                @keyframes spin {
-                  to { transform: rotate(360deg); }
-                }
-              `}</style>
             </div>
           </div>
         </div>
@@ -276,14 +289,10 @@ function Announcements() {
                     borderLeftColor: announcementType.color
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
                     e.currentTarget.style.borderColor = announcementType.color;
-                    e.currentTarget.style.boxShadow = `0 10px 25px ${announcementType.color}20`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.borderColor = "#2d3748";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   <div style={styles.announcementHeader}>
@@ -302,7 +311,12 @@ function Announcements() {
                   <div style={styles.announcementMeta}>
                     <div style={styles.metaLeft}>
                       <span style={styles.metaText}>
-                        👤 Posted by {announcement.created_by || "Admin"}
+                        👤 {announcement.created_by || "Admin"}
+                        {announcement.created_by_role && (
+                          <span style={styles.creatorRole}>
+                            ({announcement.created_by_role.toUpperCase()})
+                          </span>
+                        )}
                       </span>
                       {relativeTime && (
                         <span style={styles.metaText}>
@@ -320,7 +334,7 @@ function Announcements() {
                       )}
                     </div>
                     
-                    {user?.role === "admin" && (
+                    {canDeleteAnnouncement(announcement) && (
                       <button
                         onClick={() => deleteAnnouncement(announcement.id, announcement.title)}
                         disabled={deleting === announcement.id}

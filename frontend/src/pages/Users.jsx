@@ -358,7 +358,7 @@ function Users() {
         <div style={styles.container}>
           <div style={styles.content}>
             <div style={styles.loadingContainer}>
-              <p style={{ color: "#94a3b8" }}>Loading users...</p>
+              <p style={{ color: "#94a3b8" }}>Loading class directory...</p>
             </div>
           </div>
         </div>
@@ -484,8 +484,6 @@ function Users() {
                     <div
                       key={user.id}
                       style={styles.userCard}
-                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#667eea")}
-                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2d3748")}
                     >
                       <div style={styles.userCardContent}>
                         <div style={styles.avatar}>

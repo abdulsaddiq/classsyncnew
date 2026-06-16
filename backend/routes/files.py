@@ -125,13 +125,26 @@ def get_folder_files(folder_id):
     ).all()
 
     return jsonify([
-        {
-            "id": file.id,
-            "file_name": file.file_name,
-            "file_type": file.file_type
-        }
-        for file in files
-    ])
+    {
+        "id": file.id,
+        "file_name": file.file_name,
+        "file_type": file.file_type,
+        "uploaded_by": file.uploaded_by,
+        "uploaded_by_name": (
+            User.query.get(file.uploaded_by).name
+            if file.uploaded_by else None
+        ),
+        "uploaded_by_role": (
+            User.query.get(file.uploaded_by).role
+            if file.uploaded_by else None
+        ),
+        "uploaded_at": (
+            file.created_at.isoformat()
+            if file.created_at else None
+        )
+    }
+    for file in files
+])
 
 
 @files_bp.route(

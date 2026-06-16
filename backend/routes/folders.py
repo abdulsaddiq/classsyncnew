@@ -103,7 +103,8 @@ def get_folder_files(folder_id):
         {
             "id": file.id,
             "file_name": file.file_name,
-            "file_type": file.file_type
+            "file_type": file.file_type,
+            "uploaded_by": file.uploaded_by
         }
         for file in files
     ])

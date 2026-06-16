@@ -9,6 +9,30 @@ function SubjectPage() {
   const [assignments, setAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+
+  const roleRank = {
+    admin: 5,
+    moderator: 4,
+    cr: 3,
+    lr: 3,
+    coordinator: 2,
+    student: 1
+  };
+
+  const canDeleteAssignment = (assignment) => {
+    if (!currentUser) return false;
+
+    if (assignment.created_by_id === currentUser.id) {
+      return true;
+    }
+
+    return (
+      roleRank[currentUser.role] >
+      roleRank[assignment.created_by_role || "student"]
+    );
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
@@ -40,6 +64,24 @@ function SubjectPage() {
       month: "short",
       year: "numeric"
     });
+  };
+
+  const deleteAssignment = async (assignmentId) => {
+    const token = localStorage.getItem("token");
+
+    if (!window.confirm("Delete this assignment?")) {
+      return;
+    }
+
+    try {
+      await api.delete(`/assignments/${assignmentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete assignment");
+    }
   };
 
   const filteredFolders = folders.filter(f => 
@@ -94,12 +136,80 @@ function SubjectPage() {
       border: "1px solid #2d3748",
       textDecoration: "none",
       color: "#cbd5e0",
-      transition: "all 0.2s",
+      transition: "border-color 0.15s",
       marginBottom: "8px"
     },
     divider: {
       margin: "40px 0",
       borderTop: "3px solid #2d3748"
+    },
+    assignmentCard: {
+      padding: "20px",
+      borderRadius: "12px",
+      border: "2px solid #2d3748",
+      borderLeftWidth: "4px",
+      marginBottom: "16px",
+      background: "rgba(167, 139, 250, 0.08)",
+      transition: "border-color 0.15s"
+    },
+    assignmentTitle: {
+      margin: "0 0 10px 0", 
+      fontSize: "20px",
+      fontWeight: "600"
+    },
+    assignmentMeta: {
+      color: "#94a3b8",
+      fontSize: "14px",
+      marginBottom: "12px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "8px"
+    },
+    assignmentCreator: {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px"
+    },
+    creatorRole: {
+      color: "#a78bfa",
+      fontSize: "11px",
+      fontWeight: "600",
+      marginLeft: "4px"
+    },
+    assignmentDescription: {
+      color: "#cbd5e0",
+      lineHeight: "1.6",
+      marginBottom: "16px",
+      fontSize: "14px"
+    },
+    dueBox: {
+      display: "inline-block",
+      background: "#1a1f3a",
+      padding: "10px 16px",
+      borderRadius: "10px",
+      border: "1px solid #2d3748"
+    },
+    dueDate: {
+      color: "#a0aec0",
+      fontSize: "13px",
+      marginBottom: "5px"
+    },
+    dueStatus: {
+      fontWeight: "bold", 
+      fontSize: "14px"
+    },
+    deleteButton: {
+      background: "linear-gradient(135deg, #ef4444, #dc2626)",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      padding: "4px 12px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "500",
+      transition: "opacity 0.15s"
     }
   };
 
@@ -141,6 +251,8 @@ function SubjectPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={styles.searchBox}
+                onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                onBlur={(e) => e.currentTarget.style.borderColor = "#2d3748"}
               />
             </div>
 
@@ -154,8 +266,8 @@ function SubjectPage() {
                   key={folder.id}
                   to={`/folder/${folder.id}`}
                   style={styles.folderItem}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateX(8px)"; e.currentTarget.style.borderColor = "#667eea"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateX(0)"; e.currentTarget.style.borderColor = "#2d3748"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#667eea"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2d3748"; }}
                 >
                   📁 {folder.folder_name}
                 </Link>
@@ -196,48 +308,52 @@ function SubjectPage() {
                     <div 
                       key={assignment.id} 
                       style={{
-                        borderLeft: `4px solid ${statusColor}`,
-                        background: "rgba(167, 139, 250, 0.08)",
-                        padding: "20px",
-                        borderRadius: "12px",
-                        border: "2px solid #2d3748",
-                        borderLeftWidth: "4px",
-                        transition: "all 0.2s ease",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                        ...styles.assignmentCard,
+                        borderLeftColor: statusColor
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.3)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)"; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = statusColor; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2d3748"; }}
                     >
                       <h3 style={{ 
-                        color: statusColor,
-                        margin: "0 0 10px 0", 
-                        fontSize: "20px",
-                        fontWeight: "600"
+                        ...styles.assignmentTitle,
+                        color: statusColor
                       }}>
                         {assignment.title}
                       </h3>
-                      <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "12px" }}>
-                        👤 Posted by {assignment.created_by}
-                      </p>
-                      <p style={{ color: "#cbd5e0", lineHeight: "1.6", marginBottom: "16px", fontSize: "14px" }}>
+                      
+                      <div style={styles.assignmentMeta}>
+                        <span style={styles.assignmentCreator}>
+                          👤 Posted by {assignment.created_by}
+                          {assignment.created_by_role && (
+                            <span style={styles.creatorRole}>
+                              ({assignment.created_by_role.toUpperCase()})
+                            </span>
+                          )}
+                        </span>
+                        {canDeleteAssignment(assignment) && (
+                          <button
+                            onClick={() => deleteAssignment(assignment.id)}
+                            style={styles.deleteButton}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                          >
+                            🗑 Delete Assignment
+                          </button>
+                        )}
+                      </div>
+                      
+                      <p style={styles.assignmentDescription}>
                         {assignment.description?.trim() || "No description provided."}
                       </p>
                       
                       {assignment.due_date && (
-                        <div style={{ 
-                          display: "inline-block", 
-                          background: "#1a1f3a", 
-                          padding: "10px 16px", 
-                          borderRadius: "10px",
-                          border: `1px solid ${statusColor}20`
-                        }}>
-                          <div style={{ color: "#a0aec0", fontSize: "13px", marginBottom: "5px" }}>
+                        <div style={styles.dueBox}>
+                          <div style={styles.dueDate}>
                             📅 Due: {formatDate(assignment.due_date)}
                           </div>
                           <div style={{ 
-                            color: statusColor,
-                            fontWeight: "bold", 
-                            fontSize: "14px"
+                            ...styles.dueStatus,
+                            color: statusColor
                           }}>
                             {isOverdue 
                               ? "❌ Overdue" 
