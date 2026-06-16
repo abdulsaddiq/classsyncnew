@@ -24,7 +24,10 @@ function Dashboard() {
     const [stats, setStats] = useState(null);
     const [activities, setActivities] = useState([]);
     const [timetable, setTimetable] = useState([]);
+    const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const canManage = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
 
     const getRoleDisplay = (role) => {
         const roleMap = {
@@ -55,6 +58,28 @@ function Dashboard() {
         return now.getHours() * 60 + now.getMinutes();
     };
 
+    const getDaysLeft = (dueDate) => {
+        if (!dueDate) return null;
+        const diff = Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+        return diff;
+    };
+
+    const getStatusColor = (daysLeft) => {
+        if (daysLeft === null) return "#94a3b8";
+        if (daysLeft < 0) return "#ef4444";
+        if (daysLeft === 0) return "#f59e0b";
+        if (daysLeft <= 3) return "#f59e0b";
+        return "#a78bfa";
+    };
+
+    const getStatusText = (daysLeft) => {
+        if (daysLeft === null) return "No due date";
+        if (daysLeft < 0) return "❌ Overdue";
+        if (daysLeft === 0) return "📅 Due Today";
+        if (daysLeft <= 3) return `⚠️ ${daysLeft} days left`;
+        return `⏳ ${daysLeft} days left`;
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
@@ -68,7 +93,8 @@ function Dashboard() {
                 await Promise.all([
                     fetchAnnouncements(headers),
                     fetchActivities(headers),
-                    fetchTimetable(headers)
+                    fetchTimetable(headers),
+                    fetchAssignments(headers)
                 ]);
 
                 if (userData.role === "admin") {
@@ -122,6 +148,15 @@ function Dashboard() {
             }
         };
 
+        const fetchAssignments = async (headers) => {
+            try {
+                const response = await api.get("/assignments", { headers });
+                setAssignments(response.data);
+            } catch (error) {
+                console.error("Error fetching assignments:", error);
+            }
+        };
+
         initializeDashboard();
     }, []);
 
@@ -130,7 +165,6 @@ function Dashboard() {
         const today = getDayName();
         const currentTime = getCurrentTimeValue();
 
-        // Get unique entries (remove duplicates by day + start_time)
         const seen = new Set();
         const uniqueEntries = timetable.filter(entry => {
             const key = `${entry.day}-${entry.start_time}`;
@@ -139,12 +173,10 @@ function Dashboard() {
             return true;
         });
 
-        // Filter today's classes and sort by time
         const todayClasses = uniqueEntries
             .filter(entry => entry.day === today)
             .sort((a, b) => getTimeValue(a.start_time) - getTimeValue(b.start_time));
 
-        // Find active class (current time between start and end)
         let activeClass = null;
         let nextClass = null;
 
@@ -162,7 +194,6 @@ function Dashboard() {
             }
         }
 
-        // If no active class found, find the next upcoming class
         if (!activeClass && todayClasses.length > 0) {
             for (const entry of todayClasses) {
                 const start = getTimeValue(entry.start_time);
@@ -180,6 +211,17 @@ function Dashboard() {
             nextClass
         };
     }, [timetable]);
+
+    // Memoized upcoming deadlines (only upcoming, not overdue)
+    const upcomingAssignments = useMemo(() => {
+        return [...assignments]
+            .filter(a => {
+                if (!a.due_date) return false;
+                return getDaysLeft(a.due_date) >= 0;
+            })
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+            .slice(0, 5);
+    }, [assignments]);
 
     if (loading) {
         return (
@@ -201,6 +243,40 @@ function Dashboard() {
 
     const roleInfo = getRoleDisplay(user?.role);
 
+    const styles = {
+        card: {
+            background: "#1a1f3a",
+            borderRadius: "12px",
+            border: "1px solid #2d3748",
+            padding: "20px",
+            marginBottom: "30px"
+        },
+        heading: {
+            color: "#ffffff",
+            fontSize: "20px",
+            fontWeight: "500",
+            margin: 0
+        },
+        subheading: {
+            color: "#94a3b8",
+            fontSize: "13px",
+            margin: "4px 0 0 0"
+        },
+        link: {
+            color: "#667eea",
+            textDecoration: "none",
+            fontSize: "14px",
+            transition: "gap 0.15s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            paddingTop: "14px",
+            marginTop: "16px",
+            borderTop: "1px solid #2d3748"
+        }
+    };
+
     return (
         <div style={{
             backgroundColor: "#0a0e27",
@@ -218,11 +294,9 @@ function Dashboard() {
             }}>
                 {/* Welcome Card */}
                 <div style={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    padding: "clamp(20px, 5vw, 30px)",
-                    borderRadius: "20px",
-                    marginBottom: "clamp(20px, 5vw, 30px)",
-                    boxShadow: "0 10px 30px rgba(102, 126, 234, 0.3)"
+                    ...styles.card,
+                    background: "#1a1f3a",
+                    border: "1px solid #2d3748"
                 }}>
                     <div style={{
                         display: "flex",
@@ -234,9 +308,10 @@ function Dashboard() {
                         <div style={{ flex: 1 }}>
                             <h1 style={{
                                 margin: "0 0 10px 0",
-                                fontSize: "clamp(20px, 6vw, 32px)",
+                                fontSize: "clamp(20px, 6vw, 28px)",
                                 color: "#ffffff",
-                                wordBreak: "break-word"
+                                wordBreak: "break-word",
+                                fontWeight: "500"
                             }}>
                                 Welcome back, {user?.name?.split(' ')[0]}! 👋
                             </h1>
@@ -251,7 +326,7 @@ function Dashboard() {
                                     borderRadius: "20px",
                                     fontSize: "12px",
                                     color: "#ffffff",
-                                    backgroundColor: "rgba(255,255,255,0.2)"
+                                    backgroundColor: "rgba(255,255,255,0.1)"
                                 }}>
                                     Roll No: {user?.roll_no}
                                 </span>
@@ -268,52 +343,58 @@ function Dashboard() {
                             </div>
                         </div>
                         <div style={{
-                            fontSize: "clamp(36px, 10vw, 48px)"
+                            fontSize: "clamp(36px, 10vw, 44px)"
                         }}>
                             🎓
                         </div>
                     </div>
                 </div>
 
-                {/* Quick Actions */}
+                {/* Quick Actions - Permission based */}
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
                     gap: "12px",
                     marginBottom: "30px"
                 }}>
-                    <Link to="/create-announcement" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "14px",
-                        borderRadius: "12px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaPlus style={{ color: "#f59e0b", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Announcement</span>
-                    </Link>
-                    <Link to="/create-assignment" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "14px",
-                        borderRadius: "12px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaClipboardList style={{ color: "#a78bfa", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Assignment</span>
-                    </Link>
+                    {canManage && (
+                        <Link to="/create-announcement" style={{
+                            textDecoration: "none",
+                            background: "#1a1f3a",
+                            padding: "14px",
+                            borderRadius: "12px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaPlus style={{ color: "#f59e0b", fontSize: "16px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Create Announcement</span>
+                        </Link>
+                    )}
+                    
+                    {canManage && (
+                        <Link to="/create-assignment" style={{
+                            textDecoration: "none",
+                            background: "#1a1f3a",
+                            padding: "14px",
+                            borderRadius: "12px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaPlus style={{ color: "#a78bfa", fontSize: "16px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Create Assignment</span>
+                        </Link>
+                    )}
+
                     <Link to="/upload-file" style={{
                         textDecoration: "none",
                         background: "#1a1f3a",
@@ -330,6 +411,24 @@ function Dashboard() {
                         <FaUpload style={{ color: "#10b981", fontSize: "16px" }} />
                         <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Upload Notes</span>
                     </Link>
+
+                    <Link to="/assignments" style={{
+                        textDecoration: "none",
+                        background: "#1a1f3a",
+                        padding: "14px",
+                        borderRadius: "12px",
+                        border: "1px solid #2d3748",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaClipboardList style={{ color: "#a78bfa", fontSize: "16px" }} />
+                        <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Assignments</span>
+                    </Link>
+
                     <Link to="/subjects" style={{
                         textDecoration: "none",
                         background: "#1a1f3a",
@@ -348,14 +447,88 @@ function Dashboard() {
                     </Link>
                 </div>
 
+                {/* Upcoming Deadlines - Moved Up */}
+                <div style={styles.card}>
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        marginBottom: "16px"
+                    }}>
+                        <h2 style={styles.heading}>📝 Upcoming Deadlines</h2>
+                    </div>
+
+                    {upcomingAssignments.length === 0 ? (
+                        <div style={{
+                            textAlign: "center",
+                            padding: "20px",
+                            color: "#94a3b8",
+                            fontSize: "14px"
+                        }}>
+                            🎉 You're all caught up!
+                            <div style={{ fontSize: "13px", marginTop: "4px", color: "#64748b" }}>
+                                No assignments due
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            {upcomingAssignments.map((assignment) => {
+                                const daysLeft = getDaysLeft(assignment.due_date);
+                                const statusColor = getStatusColor(daysLeft);
+                                
+                                return (
+                                    <div
+                                        key={assignment.id}
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "10px 12px",
+                                            borderBottom: "1px solid #2d3748",
+                                            flexWrap: "wrap",
+                                            gap: "6px"
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{
+                                                color: "#ffffff",
+                                                fontSize: "14px",
+                                                fontWeight: "500"
+                                            }}>
+                                                {assignment.title}
+                                            </div>
+                                            <div style={{
+                                                color: "#94a3b8",
+                                                fontSize: "12px"
+                                            }}>
+                                                📚 {assignment.subject_name || "Unknown Subject"}
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            color: statusColor,
+                                            fontSize: "13px",
+                                            fontWeight: "500"
+                                        }}>
+                                            {getStatusText(daysLeft)}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <Link
+                        to="/assignments"
+                        style={styles.link}
+                        onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
+                        onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
+                    >
+                        View All Assignments <FaArrowRight style={{ fontSize: "12px" }} />
+                    </Link>
+                </div>
+
                 {/* Today's Classes */}
-                <div style={{
-                    background: "#1a1f3a",
-                    borderRadius: "12px",
-                    border: "1px solid #2d3748",
-                    padding: "20px",
-                    marginBottom: "30px"
-                }}>
+                <div style={styles.card}>
                     <div style={{
                         display: "flex",
                         justifyContent: "space-between",
@@ -365,28 +538,11 @@ function Dashboard() {
                         marginBottom: "16px"
                     }}>
                         <div>
-                            <h2 style={{
-                                color: "#ffffff",
-                                fontSize: "20px",
-                                margin: 0,
-                                fontWeight: "500"
-                            }}>
-                                📅 Today's Classes
-                            </h2>
-                            <p style={{
-                                color: "#94a3b8",
-                                fontSize: "13px",
-                                margin: "4px 0 0 0"
-                            }}>
-                                {todayData.today} Schedule
+                            <h2 style={styles.heading}>📅 Today's Classes</h2>
+                            <p style={styles.subheading}>
+                                {todayData.today} • {todayData.classes.length} Classes
                             </p>
                         </div>
-                        <span style={{
-                            color: "#94a3b8",
-                            fontSize: "13px"
-                        }}>
-                            Today's Classes: {todayData.classes.length}
-                        </span>
                     </div>
 
                     {todayData.classes.length === 0 ? (
@@ -499,19 +655,7 @@ function Dashboard() {
 
                     <Link
                         to="/timetable"
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "6px",
-                            marginTop: "16px",
-                            paddingTop: "14px",
-                            borderTop: "1px solid #2d3748",
-                            color: "#667eea",
-                            textDecoration: "none",
-                            fontSize: "14px",
-                            transition: "gap 0.15s"
-                        }}
+                        style={styles.link}
                         onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
                         onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
                     >
@@ -537,11 +681,9 @@ function Dashboard() {
                             <div
                                 key={index}
                                 style={{
-                                    background: "#1a1f3a",
-                                    padding: "clamp(14px, 4vw, 18px)",
-                                    borderRadius: "12px",
-                                    border: "1px solid #2d3748",
-                                    transition: "border-color 0.15s"
+                                    ...styles.card,
+                                    marginBottom: 0,
+                                    padding: "clamp(14px, 4vw, 18px)"
                                 }}
                                 onMouseEnter={(e) => e.currentTarget.style.borderColor = stat.color}
                                 onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
@@ -595,20 +737,15 @@ function Dashboard() {
                             marginBottom: "15px",
                             flexWrap: "wrap"
                         }}>
-                            <FaFire style={{ color: "#f97316", fontSize: "clamp(18px, 4vw, 22px)" }} />
+                            <FaFire style={{ color: "#f97316", fontSize: "clamp(18px, 4vw, 20px)" }} />
                             <h2 style={{
                                 color: "#ffffff",
                                 margin: 0,
-                                fontSize: "clamp(18px, 4vw, 22px)",
+                                fontSize: "clamp(18px, 4vw, 20px)",
                                 fontWeight: "500"
                             }}>
                                 Recent Activity ({activities.length})
                             </h2>
-                            <div style={{
-                                height: "2px",
-                                flex: 1,
-                                background: "linear-gradient(90deg, #f97316, transparent)"
-                            }}></div>
                         </div>
 
                         <div style={{
@@ -623,14 +760,13 @@ function Dashboard() {
                                     <div
                                         key={activity.id}
                                         style={{
-                                            background: "#1a1f3a",
+                                            ...styles.card,
+                                            marginBottom: 0,
                                             padding: "clamp(12px, 3vw, 14px)",
-                                            borderRadius: "10px",
-                                            border: "1px solid #2d3748",
                                             display: "flex",
                                             alignItems: "flex-start",
                                             gap: "10px",
-                                            transition: "border-color 0.15s"
+                                            border: "1px solid #2d3748"
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f97316"}
                                         onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
@@ -656,13 +792,12 @@ function Dashboard() {
                                 ))
                             ) : (
                                 <div style={{
-                                    background: "#1a1f3a",
-                                    padding: "clamp(30px, 8vw, 40px)",
-                                    borderRadius: "12px",
+                                    ...styles.card,
+                                    marginBottom: 0,
                                     textAlign: "center",
                                     color: "#94a3b8",
-                                    fontSize: "clamp(12px, 3.5vw, 14px)",
-                                    border: "1px solid #2d3748"
+                                    fontSize: "14px",
+                                    padding: "clamp(30px, 8vw, 40px)"
                                 }}>
                                     No recent activities yet
                                 </div>
@@ -682,16 +817,11 @@ function Dashboard() {
                             <h2 style={{
                                 color: "#ffffff",
                                 margin: 0,
-                                fontSize: "clamp(18px, 4vw, 22px)",
+                                fontSize: "clamp(18px, 4vw, 20px)",
                                 fontWeight: "500"
                             }}>
                                 📢 Announcements ({announcements.length})
                             </h2>
-                            <div style={{
-                                height: "2px",
-                                flex: 1,
-                                background: "linear-gradient(90deg, #667eea, transparent)"
-                            }}></div>
                         </div>
 
                         <div style={{
@@ -708,11 +838,10 @@ function Dashboard() {
                                     <div
                                         key={announcement.id}
                                         style={{
-                                            background: "#1a1f3a",
+                                            ...styles.card,
+                                            marginBottom: 0,
                                             padding: "clamp(14px, 4vw, 18px)",
-                                            borderRadius: "12px",
-                                            border: "1px solid #2d3748",
-                                            transition: "border-color 0.15s"
+                                            border: "1px solid #2d3748"
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
                                         onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
@@ -768,31 +897,23 @@ function Dashboard() {
                             })}
                             {announcements.length === 0 && (
                                 <div style={{
-                                    background: "#1a1f3a",
-                                    padding: "clamp(30px, 8vw, 40px)",
-                                    borderRadius: "12px",
+                                    ...styles.card,
+                                    marginBottom: 0,
                                     textAlign: "center",
                                     color: "#94a3b8",
-                                    fontSize: "clamp(12px, 3.5vw, 14px)",
-                                    border: "1px solid #2d3748"
+                                    fontSize: "14px",
+                                    padding: "clamp(30px, 8vw, 40px)"
                                 }}>
                                     No announcements yet
                                 </div>
                             )}
                             {announcements.length > 3 && (
-                                <Link to="/announcements" style={{
-                                    textAlign: "center",
-                                    color: "#667eea",
-                                    textDecoration: "none",
-                                    fontSize: "clamp(12px, 3.5vw, 14px)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "6px",
-                                    padding: "8px",
-                                    borderRadius: "8px",
-                                    background: "rgba(102, 126, 234, 0.05)"
-                                }}>
+                                <Link
+                                    to="/announcements"
+                                    style={styles.link}
+                                    onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
+                                    onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
+                                >
                                     View All Announcements <FaArrowRight style={{ fontSize: "12px" }} />
                                 </Link>
                             )}
@@ -809,12 +930,12 @@ function Dashboard() {
                     
                     ::-webkit-scrollbar-track {
                         background: #1a1f3a;
-                        borderRadius: 8px;
+                        border-radius: 8px;
                     }
                     
                     ::-webkit-scrollbar-thumb {
                         background: #667eea;
-                        borderRadius: 8px;
+                        border-radius: 8px;
                     }
                     
                     ::-webkit-scrollbar-thumb:hover {

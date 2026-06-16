@@ -15,11 +15,11 @@ function Timetable() {
   const canEdit = ["admin", "moderator", "cr", "lr"].includes(user?.role);
 
   const timeSlots = [
-    { start: "08:30", end: "09:30" },
     { start: "09:30", end: "10:20" },
     { start: "10:20", end: "11:10" },
     { start: "11:10", end: "12:00" },
     { start: "12:00", end: "12:50" },
+    { start: "12:50", end: "13:50" },
     { start: "13:50", end: "14:40" },
     { start: "14:40", end: "15:30" },
     { start: "15:30", end: "16:20" }

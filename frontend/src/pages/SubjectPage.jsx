@@ -6,32 +6,7 @@ import Navbar from "../components/Navbar";
 function SubjectPage() {
   const { id } = useParams();
   const [folders, setFolders] = useState([]);
-  const [assignments, setAssignments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const currentUser = JSON.parse(localStorage.getItem("user"));
-
-  const roleRank = {
-    admin: 5,
-    moderator: 4,
-    cr: 3,
-    lr: 3,
-    coordinator: 2,
-    student: 1
-  };
-
-  const canDeleteAssignment = (assignment) => {
-    if (!currentUser) return false;
-
-    if (assignment.created_by_id === currentUser.id) {
-      return true;
-    }
-
-    return (
-      roleRank[currentUser.role] >
-      roleRank[assignment.created_by_role || "student"]
-    );
-  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -39,50 +14,14 @@ function SubjectPage() {
 
     const fetchData = async () => {
       try {
-        const [foldersRes, assignmentsRes] = await Promise.all([
-          api.get(`/subjects/${id}/folders`, { headers }),
-          api.get(`/assignments/subject/${id}`, { headers })
-        ]);
+        const foldersRes = await api.get(`/subjects/${id}/folders`, { headers });
         setFolders(foldersRes.data);
-        setAssignments(assignmentsRes.data);
       } catch (error) {
         console.error(error);
       }
     };
     fetchData();
   }, [id]);
-
-  const getDaysLeft = (dueDate) => {
-    if (!dueDate) return null;
-    const diff = Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
-    return diff;
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric"
-    });
-  };
-
-  const deleteAssignment = async (assignmentId) => {
-    const token = localStorage.getItem("token");
-
-    if (!window.confirm("Delete this assignment?")) {
-      return;
-    }
-
-    try {
-      await api.delete(`/assignments/${assignmentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
-    } catch (err) {
-      alert(err.response?.data?.error || "Failed to delete assignment");
-    }
-  };
 
   const filteredFolders = folders.filter(f => 
     f.folder_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -138,85 +77,7 @@ function SubjectPage() {
       color: "#cbd5e0",
       transition: "border-color 0.15s",
       marginBottom: "8px"
-    },
-    divider: {
-      margin: "40px 0",
-      borderTop: "3px solid #2d3748"
-    },
-    assignmentCard: {
-      padding: "20px",
-      borderRadius: "12px",
-      border: "2px solid #2d3748",
-      borderLeftWidth: "4px",
-      marginBottom: "16px",
-      background: "rgba(167, 139, 250, 0.08)",
-      transition: "border-color 0.15s"
-    },
-    assignmentTitle: {
-      margin: "0 0 10px 0", 
-      fontSize: "20px",
-      fontWeight: "600"
-    },
-    assignmentMeta: {
-      color: "#94a3b8",
-      fontSize: "14px",
-      marginBottom: "12px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      flexWrap: "wrap",
-      gap: "8px"
-    },
-    assignmentCreator: {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px"
-    },
-    creatorRole: {
-      color: "#a78bfa",
-      fontSize: "11px",
-      fontWeight: "600",
-      marginLeft: "4px"
-    },
-    assignmentDescription: {
-      color: "#cbd5e0",
-      lineHeight: "1.6",
-      marginBottom: "16px",
-      fontSize: "14px"
-    },
-    dueBox: {
-      display: "inline-block",
-      background: "#1a1f3a",
-      padding: "10px 16px",
-      borderRadius: "10px",
-      border: "1px solid #2d3748"
-    },
-    dueDate: {
-      color: "#a0aec0",
-      fontSize: "13px",
-      marginBottom: "5px"
-    },
-    dueStatus: {
-      fontWeight: "bold", 
-      fontSize: "14px"
-    },
-    deleteButton: {
-      background: "linear-gradient(135deg, #ef4444, #dc2626)",
-      color: "white",
-      border: "none",
-      borderRadius: "6px",
-      padding: "4px 12px",
-      cursor: "pointer",
-      fontSize: "12px",
-      fontWeight: "500",
-      transition: "opacity 0.15s"
     }
-  };
-
-  const getStatusColor = (isOverdue, isUrgent, isDueToday) => {
-    if (isOverdue) return "#ef4444";
-    if (isUrgent || isDueToday) return "#f59e0b";
-    return "#a78bfa";
   };
 
   const getEmptyMessage = (type, hasSearch) => {
@@ -236,7 +97,7 @@ function SubjectPage() {
           
           {/* Header */}
           <h1 style={styles.heading}>📚 Subject Resources</h1>
-          <p style={styles.subheading}>Browse notes, folders and assignments</p>
+          <p style={styles.subheading}>Browse notes, folders and study materials</p>
 
           {/* Folders Section */}
           <div style={{ marginBottom: "20px" }}>
@@ -272,104 +133,6 @@ function SubjectPage() {
                   📁 {folder.folder_name}
                 </Link>
               ))
-            )}
-          </div>
-
-          {/* Divider */}
-          <div style={styles.divider} />
-
-          {/* Assignments Section */}
-          <div>
-            <div style={{ textAlign: "center", marginBottom: "25px" }}>
-              <h2 style={{ ...styles.sectionTitle, fontSize: "24px" }}>📝 Assignments</h2>
-              <p style={{ ...styles.sectionSubtitle, fontSize: "15px" }}>
-                {assignments.length === 0 
-                  ? "No Assignments Available"
-                  : `${assignments.length} ${assignments.length === 1 ? "Assignment Available" : "Assignments Available"}`
-                }
-              </p>
-              <p style={{ ...styles.sectionSubtitle, marginTop: "0px" }}>Track coursework and upcoming deadlines</p>
-            </div>
-
-            {assignments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "50px", background: "rgba(167, 139, 250, 0.05)", borderRadius: "12px", border: "2px solid #2d3748", color: "#a0aec0" }}>
-                {getEmptyMessage("assignments", false)}
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "900px", margin: "0 auto" }}>
-                {assignments.map(assignment => {
-                  const daysLeft = getDaysLeft(assignment.due_date);
-                  const isOverdue = daysLeft < 0;
-                  const isDueToday = daysLeft === 0;
-                  const isUrgent = daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
-                  const statusColor = getStatusColor(isOverdue, isUrgent, isDueToday);
-                  
-                  return (
-                    <div 
-                      key={assignment.id} 
-                      style={{
-                        ...styles.assignmentCard,
-                        borderLeftColor: statusColor
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = statusColor; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2d3748"; }}
-                    >
-                      <h3 style={{ 
-                        ...styles.assignmentTitle,
-                        color: statusColor
-                      }}>
-                        {assignment.title}
-                      </h3>
-                      
-                      <div style={styles.assignmentMeta}>
-                        <span style={styles.assignmentCreator}>
-                          👤 Posted by {assignment.created_by}
-                          {assignment.created_by_role && (
-                            <span style={styles.creatorRole}>
-                              ({assignment.created_by_role.toUpperCase()})
-                            </span>
-                          )}
-                        </span>
-                        {canDeleteAssignment(assignment) && (
-                          <button
-                            onClick={() => deleteAssignment(assignment.id)}
-                            style={styles.deleteButton}
-                            onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
-                            onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
-                          >
-                            🗑 Delete Assignment
-                          </button>
-                        )}
-                      </div>
-                      
-                      <p style={styles.assignmentDescription}>
-                        {assignment.description?.trim() || "No description provided."}
-                      </p>
-                      
-                      {assignment.due_date && (
-                        <div style={styles.dueBox}>
-                          <div style={styles.dueDate}>
-                            📅 Due: {formatDate(assignment.due_date)}
-                          </div>
-                          <div style={{ 
-                            ...styles.dueStatus,
-                            color: statusColor
-                          }}>
-                            {isOverdue 
-                              ? "❌ Overdue" 
-                              : isDueToday 
-                              ? "📅 Due Today" 
-                              : isUrgent 
-                              ? "⚠️ Urgent! Due soon" 
-                              : `⏳ ${daysLeft} days left`
-                            }
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
             )}
           </div>
         </div>

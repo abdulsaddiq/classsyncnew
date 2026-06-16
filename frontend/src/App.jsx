@@ -13,7 +13,7 @@ import Users from "./pages/Users";
 import CreateAssignment from "./pages/CreateAssignment";
 import Signup from "./pages/Signup";
 import Timetable from "./pages/Timetable";
-
+import Assignments from "./pages/Assignments"
 
 
 
@@ -91,6 +91,11 @@ function App() {
         <Route
           path="/timetable"
           element={<Timetable />}
+        />
+
+        <Route
+          path="/Assignments"
+          element={<Assignments />}
         />
 
       </Routes>

@@ -68,12 +68,10 @@ function Navbar() {
           {/* Desktop Nav */}
           <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
             <Link to="/dashboard" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Dashboard</Link>
+            <Link to="/subjects" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Subjects</Link>
+            <Link to="/assignments" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Assignments</Link>
+            <Link to="/timetable" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Timetable</Link>
             <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcements</Link>
-            
-            {/* Visible to everyone */}
-            <Link to="/create-announcement" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Create Announcement</Link>
-            <Link to="/upload-file" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Upload Notes</Link>
-            <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Create Assignment</Link>
             <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Class Directory</Link>
             
             {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
@@ -116,12 +114,10 @@ function Navbar() {
       {mobileMenuOpen && (
         <div style={{ position: "fixed", top: "64px", left: 0, right: 0, background: "#0f0f1a", borderBottom: "1px solid #1a1a2e", padding: "20px", zIndex: 999, display: "flex", flexDirection: "column", gap: "8px" }}>
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Dashboard</Link>
+          <Link to="/subjects" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Subjects</Link>
+          <Link to="/assignments" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignments</Link>
+          <Link to="/timetable" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Timetable</Link>
           <Link to="/announcements" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Announcements</Link>
-          
-          {/* Visible to everyone */}
-          <Link to="/create-announcement" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Announcement</Link>
-          <Link to="/upload-file" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Upload Notes</Link>
-          <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Assignment</Link>
           <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Class Directory</Link>
           
           {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
