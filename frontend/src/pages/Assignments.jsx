@@ -16,6 +16,7 @@ function Assignments() {
     due_date: ""
   });
   const [submitting, setSubmitting] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user"));
   const canManage = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
@@ -43,6 +44,45 @@ function Assignments() {
     }
   };
 
+  const toggleCompletion = async (assignmentId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        `/assignments/${assignmentId}/toggle-completion`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const completed = response.data.completed;
+      
+      setAssignments(prev =>
+        prev.map(a =>
+          a.id === assignmentId
+            ? { ...a, completed: completed }
+            : a
+        )
+      );
+
+      // Show feedback message
+      if (completed) {
+        setCompletionMessage({
+          id: assignmentId,
+          text: "✓ Moved to Completed"
+        });
+        setTimeout(() => setCompletionMessage(null), 3000);
+      } else {
+        setCompletionMessage({
+          id: assignmentId,
+          text: "↩️ Moved back to Active"
+        });
+        setTimeout(() => setCompletionMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update assignment status");
+    }
+  };
+
   const getDaysLeft = (dueDate) => {
     if (!dueDate) return null;
     const diff = Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
@@ -57,7 +97,8 @@ function Assignments() {
     });
   };
 
-  const getStatusColor = (daysLeft) => {
+  const getStatusColor = (daysLeft, completed) => {
+    if (completed) return "#34d399";
     if (daysLeft === null) return "#94a3b8";
     if (daysLeft < 0) return "#ef4444";
     if (daysLeft === 0) return "#f59e0b";
@@ -65,7 +106,8 @@ function Assignments() {
     return "#a78bfa";
   };
 
-  const getStatusText = (daysLeft) => {
+  const getStatusText = (daysLeft, completed) => {
+    if (completed) return "✅ Completed";
     if (daysLeft === null) return "No due date";
     if (daysLeft < 0) return "❌ Overdue";
     if (daysLeft === 0) return "📅 Due Today";
@@ -148,15 +190,21 @@ function Assignments() {
   // Filter assignments
   const filteredAssignments = assignments.filter(a => {
     const daysLeft = getDaysLeft(a.due_date);
+    const isOverdue = daysLeft !== null && daysLeft < 0;
+
     if (filter === "all") return true;
-    if (filter === "pending") return daysLeft !== null && daysLeft > 0;
-    if (filter === "due-today") return daysLeft === 0;
-    if (filter === "overdue") return daysLeft !== null && daysLeft < 0;
+    if (filter === "active") return a.completed === false;
+    if (filter === "completed") return a.completed === true;
+    if (filter === "due-today") return daysLeft === 0 && a.completed === false;
+    if (filter === "overdue") return isOverdue && a.completed === false;
     return true;
   });
 
-  // Sort: Overdue first, then by due date ascending
+  // Sort: Active assignments first (by due date), then completed (by completion date)
   const sortedAssignments = [...filteredAssignments].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
     const daysA = getDaysLeft(a.due_date);
     const daysB = getDaysLeft(b.due_date);
     if (daysA === null && daysB === null) return 0;
@@ -167,14 +215,15 @@ function Assignments() {
 
   // Stats
   const total = assignments.length;
-  const pending = assignments.filter(a => {
+  const active = assignments.filter(a => a.completed === false).length;
+  const completed = assignments.filter(a => a.completed === true).length;
+  const dueToday = assignments.filter(a => {
     const days = getDaysLeft(a.due_date);
-    return days !== null && days > 0;
+    return days === 0 && a.completed === false;
   }).length;
-  const dueToday = assignments.filter(a => getDaysLeft(a.due_date) === 0).length;
   const overdue = assignments.filter(a => {
     const days = getDaysLeft(a.due_date);
-    return days !== null && days < 0;
+    return days !== null && days < 0 && a.completed === false;
   }).length;
 
   const styles = {
@@ -241,7 +290,11 @@ function Assignments() {
       marginBottom: "12px",
       border: "1px solid #2d3748",
       borderLeft: "4px solid #a78bfa",
-      transition: "border-color 0.15s"
+      transition: "border-color 0.15s",
+      position: "relative"
+    },
+    assignmentCardCompleted: {
+      opacity: 0.7
     },
     assignmentContent: {
       display: "flex",
@@ -250,15 +303,33 @@ function Assignments() {
       flexWrap: "wrap",
       gap: "12px"
     },
-    assignmentMain: {
+    assignmentLeft: {
+      display: "flex",
+      alignItems: "flex-start",
+      gap: "12px",
       flex: 1,
       minWidth: "200px"
+    },
+    checkbox: {
+      marginTop: "3px",
+      width: "18px",
+      height: "18px",
+      cursor: "pointer",
+      accentColor: "#667eea",
+      flexShrink: 0
+    },
+    assignmentMain: {
+      flex: 1
     },
     assignmentTitle: {
       color: "#ffffff",
       fontSize: "18px",
       fontWeight: "600",
       margin: "0 0 4px 0"
+    },
+    assignmentTitleCompleted: {
+      textDecoration: "line-through",
+      opacity: 0.6
     },
     subjectBadge: {
       background: "#2d3748",
@@ -283,6 +354,9 @@ function Assignments() {
       fontSize: "14px",
       lineHeight: "1.5",
       marginBottom: "12px"
+    },
+    descriptionCompleted: {
+      opacity: 0.6
     },
     dueBox: {
       display: "inline-block",
@@ -461,6 +535,22 @@ function Assignments() {
     buttonDisabled: {
       opacity: 0.6,
       cursor: "not-allowed"
+    },
+    toast: {
+      position: "fixed",
+      bottom: "30px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "#1a1f3a",
+      color: "#e2e8f0",
+      padding: "12px 24px",
+      borderRadius: "12px",
+      border: "1px solid #2d3748",
+      fontSize: "14px",
+      zIndex: 10000,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+      maxWidth: "90%",
+      textAlign: "center"
     }
   };
 
@@ -494,13 +584,14 @@ function Assignments() {
             <span style={{ ...styles.statBadge, color: "#94a3b8", background: "#2d3748" }}>
               Total: {total}
             </span>
-            {pending > 0 && (
-              <span style={{ ...styles.statBadge, color: "#f59e0b", background: "rgba(245, 158, 11, 0.15)" }}>
-                ⏳ Pending: {pending}
-              </span>
-            )}
+            <span style={{ ...styles.statBadge, color: "#f59e0b", background: "rgba(245, 158, 11, 0.15)" }}>
+              Active: {active}
+            </span>
+            <span style={{ ...styles.statBadge, color: "#34d399", background: "rgba(16, 185, 129, 0.15)" }}>
+              ✅ Completed: {completed}
+            </span>
             {dueToday > 0 && (
-              <span style={{ ...styles.statBadge, color: "#34d399", background: "rgba(16, 185, 129, 0.15)" }}>
+              <span style={{ ...styles.statBadge, color: "#60a5fa", background: "rgba(96, 165, 250, 0.15)" }}>
                 📅 Due Today: {dueToday}
               </span>
             )}
@@ -511,9 +602,9 @@ function Assignments() {
             )}
           </div>
 
-          {/* Filters */}
+          {/* Tabs */}
           <div style={styles.filterRow}>
-            {["all", "pending", "due-today", "overdue"].map((f) => (
+            {["all", "active", "completed", "due-today", "overdue"].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -523,7 +614,8 @@ function Assignments() {
                 }}
               >
                 {f === "all" && "All"}
-                {f === "pending" && "Pending"}
+                {f === "active" && "Active"}
+                {f === "completed" && "Completed"}
                 {f === "due-today" && "Due Today"}
                 {f === "overdue" && "Overdue"}
               </button>
@@ -534,52 +626,76 @@ function Assignments() {
             <div style={styles.emptyContainer}>
               <div style={styles.emptyIcon}>📝</div>
               <h3 style={styles.emptyTitle}>
-                {filter === "all" ? "No assignments yet" : `No ${filter.replace("-", " ")} assignments`}
+                {filter === "all" && "No assignments yet"}
+                {filter === "active" && "No active assignments"}
+                {filter === "completed" && "No completed assignments"}
+                {filter === "due-today" && "No assignments due today"}
+                {filter === "overdue" && "No overdue assignments"}
               </h3>
               <p style={styles.emptyText}>
-                {filter === "all" 
-                  ? "Assignments will appear here when created" 
-                  : `No assignments match the "${filter.replace("-", " ")}" filter`}
+                {filter === "all" && "Assignments will appear here when created"}
+                {filter === "active" && "Complete assignments to clear them from Active"}
+                {filter === "completed" && "Complete assignments to see them here"}
+                {filter === "due-today" && "No assignments due today"}
+                {filter === "overdue" && "No overdue assignments"}
               </p>
             </div>
           ) : (
             sortedAssignments.map((assignment) => {
               const daysLeft = getDaysLeft(assignment.due_date);
-              const statusColor = getStatusColor(daysLeft);
+              const statusColor = getStatusColor(daysLeft, assignment.completed);
+              const isCompleted = assignment.completed === true;
               
               return (
                 <div
                   key={assignment.id}
                   style={{
                     ...styles.assignmentCard,
-                    borderLeftColor: statusColor
+                    borderLeftColor: statusColor,
+                    ...(isCompleted ? styles.assignmentCardCompleted : {})
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.borderColor = statusColor}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                 >
                   <div style={styles.assignmentContent}>
-                    <div style={styles.assignmentMain}>
-                      <h3 style={styles.assignmentTitle}>{assignment.title}</h3>
-                      <div style={styles.subjectBadge}>
-                        📚 {assignment.subject_name || "Unknown Subject"}
-                      </div>
-                      <div style={styles.assignmentMeta}>
-                        <span>👤 Posted by {assignment.created_by || "Admin"}</span>
-                        {assignment.created_by_role && (
-                          <span>({assignment.created_by_role.toUpperCase()})</span>
-                        )}
-                      </div>
-                      {assignment.description && (
-                        <p style={styles.assignmentDescription}>
-                          {assignment.description}
-                        </p>
-                      )}
-                      <div style={styles.dueBox}>
-                        <div style={{ color: "#94a3b8", fontSize: "12px" }}>
-                          📅 Due: {assignment.due_date ? formatDate(assignment.due_date) : "No due date"}
+                    <div style={styles.assignmentLeft}>
+                      <input
+                        type="checkbox"
+                        checked={isCompleted}
+                        onChange={() => toggleCompletion(assignment.id)}
+                        style={styles.checkbox}
+                      />
+                      <div style={styles.assignmentMain}>
+                        <h3 style={{
+                          ...styles.assignmentTitle,
+                          ...(isCompleted ? styles.assignmentTitleCompleted : {})
+                        }}>
+                          {assignment.title}
+                        </h3>
+                        <div style={styles.subjectBadge}>
+                          📚 {assignment.subject_name || "Unknown Subject"}
                         </div>
-                        <div style={{ ...styles.dueText, color: statusColor }}>
-                          {getStatusText(daysLeft)}
+                        <div style={styles.assignmentMeta}>
+                          <span>👤 Posted by {assignment.created_by || "Admin"}</span>
+                          {assignment.created_by_role && (
+                            <span>({assignment.created_by_role.toUpperCase()})</span>
+                          )}
+                        </div>
+                        {assignment.description && (
+                          <p style={{
+                            ...styles.assignmentDescription,
+                            ...(isCompleted ? styles.descriptionCompleted : {})
+                          }}>
+                            {assignment.description}
+                          </p>
+                        )}
+                        <div style={styles.dueBox}>
+                          <div style={{ color: "#94a3b8", fontSize: "12px" }}>
+                            📅 Due: {assignment.due_date ? formatDate(assignment.due_date) : "No due date"}
+                          </div>
+                          <div style={{ ...styles.dueText, color: statusColor }}>
+                            {getStatusText(daysLeft, isCompleted)}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -684,6 +800,13 @@ function Assignments() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {completionMessage && (
+        <div style={styles.toast}>
+          {completionMessage.text}
         </div>
       )}
     </>

@@ -17,7 +17,7 @@ from utils.supabase_client import supabase
 from models.comment import Comment
 from routes.comments import comments_bp
 from routes.timetables import timetables_bp
-
+from models.assignment_completion import AssignmentCompletion
 
 
 

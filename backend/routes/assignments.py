@@ -11,6 +11,10 @@ from models.user import User
 from models.assignment import Assignment
 from models.activity import Activity
 from models.subject import Subject
+from models.assignment_completion import (
+    AssignmentCompletion
+)
+
 
 
 assignments_bp = Blueprint(
@@ -65,6 +69,7 @@ def create_assignment():
 @assignments_bp.route("", methods=["GET"])
 @jwt_required()
 def get_assignments():
+    user_id = get_jwt_identity()
 
     assignments = Assignment.query.all()
 
@@ -82,6 +87,17 @@ def get_assignments():
             if assignment.subject_id
             else None
             ),
+
+            "completed": (
+                AssignmentCompletion.query.filter_by(
+                    assignment_id=assignment.id,
+                    user_id=user_id,
+                    completed=True
+                ).first()
+                is not None
+            ),
+
+
             "due_date": (
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
@@ -121,6 +137,7 @@ def get_assignments():
 )
 @jwt_required()
 def get_subject_assignments(subject_id):
+    user_id = get_jwt_identity()
 
     assignments = Assignment.query.filter_by(
         subject_id=subject_id
@@ -140,6 +157,16 @@ def get_subject_assignments(subject_id):
             if assignment.subject_id
             else None
             ),
+
+            "completed": (
+                AssignmentCompletion.query.filter_by(
+                    assignment_id=assignment.id,
+                    user_id=user_id,
+                    completed=True
+                ).first()
+                is not None
+            ),
+
             "due_date": (
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
@@ -306,4 +333,62 @@ def update_assignment(assignment_id):
 
     return jsonify({
         "message": "Assignment updated"
+    }), 200
+
+@assignments_bp.route(
+    "/<int:assignment_id>/toggle-completion",
+    methods=["POST"]
+)
+@jwt_required()
+def toggle_assignment_completion(
+    assignment_id
+):
+    user_id = get_jwt_identity()
+
+    assignment = Assignment.query.get(
+        assignment_id
+    )
+
+    if not assignment:
+        return jsonify({
+            "error": "Assignment not found"
+        }), 404
+
+    completion = (
+        AssignmentCompletion.query
+        .filter_by(
+            assignment_id=assignment_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+    if not completion:
+
+        completion = AssignmentCompletion(
+            assignment_id=assignment_id,
+            user_id=user_id,
+            completed=True,
+            completed_at=datetime.utcnow()
+        )
+
+        db.session.add(completion)
+
+    else:
+
+        completion.completed = (
+            not completion.completed
+        )
+
+        if completion.completed:
+            completion.completed_at = (
+                datetime.utcnow()
+            )
+        else:
+            completion.completed_at = None
+
+    db.session.commit()
+
+    return jsonify({
+        "completed": completion.completed
     }), 200
