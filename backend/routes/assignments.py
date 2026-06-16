@@ -10,6 +10,8 @@ from models import db
 from models.user import User
 from models.assignment import Assignment
 from models.activity import Activity
+from models.subject import Subject
+
 
 assignments_bp = Blueprint(
     "assignments",
@@ -72,6 +74,14 @@ def get_assignments():
             "title": assignment.title,
             "description": assignment.description,
             "subject_id": assignment.subject_id,
+
+            "subject_name": (
+                Subject.query.get(
+                assignment.subject_id
+            ).name
+            if assignment.subject_id
+            else None
+            ),
             "due_date": (
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
@@ -122,6 +132,14 @@ def get_subject_assignments(subject_id):
             "title": assignment.title,
             "description": assignment.description,
             "subject_id": assignment.subject_id,
+
+            "subject_name": (
+                Subject.query.get(
+                assignment.subject_id
+            ).name
+            if assignment.subject_id
+            else None
+            ),
             "due_date": (
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
@@ -208,4 +226,84 @@ def delete_assignment(assignment_id):
 
     return jsonify({
         "message": "Assignment deleted"
+    }), 200
+
+
+@assignments_bp.route(
+    "/<int:assignment_id>",
+    methods=["PUT"]
+)
+@jwt_required()
+def update_assignment(assignment_id):
+
+    user_id = get_jwt_identity()
+
+    user = User.query.get(user_id)
+
+    assignment = Assignment.query.get(
+        assignment_id
+    )
+
+    if not assignment:
+        return jsonify({
+            "error": "Assignment not found"
+        }), 404
+
+    creator = User.query.get(
+        assignment.created_by
+    )
+
+    role_rank = {
+        "admin": 5,
+        "moderator": 4,
+        "cr": 3,
+        "lr": 3,
+        "coordinator": 2,
+        "student": 1
+    }
+
+    if assignment.created_by == user.id:
+        pass
+
+    elif (
+        creator and
+        role_rank.get(user.role, 0)
+        > role_rank.get(creator.role, 0)
+    ):
+        pass
+
+    else:
+        return jsonify({
+            "error": "Permission denied"
+        }), 403
+
+    data = request.get_json()
+
+    assignment.title = data.get(
+        "title",
+        assignment.title
+    )
+
+    assignment.description = data.get(
+        "description",
+        assignment.description
+    )
+
+    assignment.subject_id = data.get(
+        "subject_id",
+        assignment.subject_id
+    )
+
+    if data.get("due_date"):
+        assignment.due_date = datetime.strptime(
+            data.get("due_date"),
+            "%Y-%m-%d"
+        )
+    else:
+        assignment.due_date = None
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Assignment updated"
     }), 200
