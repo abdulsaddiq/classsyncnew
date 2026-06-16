@@ -7,6 +7,7 @@ function Users() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
     fetchUsers();
@@ -44,21 +45,29 @@ function Users() {
     }
   };
 
-  const toggleRole = async (userId) => {
+  const updateRole = async (userId, role) => {
     setUpdating(userId);
+
     try {
       const token = localStorage.getItem("token");
+
       const response = await api.put(
         `/auth/users/${userId}/role`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { role },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
+
       setUsers(
         users.map((user) =>
-          user.id === userId ? { ...user, role: response.data.role } : user
+          user.id === userId
+            ? { ...user, role: response.data.role }
+            : user
         )
       );
-      alert(`✅ User role updated to ${response.data.role}`);
     } catch (error) {
       console.error(error);
       alert("❌ Role update failed");
@@ -71,16 +80,83 @@ function Users() {
     return name.charAt(0).toUpperCase();
   };
 
+  const getRoleInfo = (role) => {
+    const roleMap = {
+      admin: { label: "Admin", icon: "👑", style: { background: "rgba(236, 72, 153, 0.15)", color: "#f472b6" } },
+      moderator: { label: "Moderator", icon: "🛡", style: { background: "rgba(168, 85, 247, 0.15)", color: "#c084fc" } },
+      cr: { label: "CR", icon: "🎓", style: { background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa" } },
+      lr: { label: "LR", icon: "🌸", style: { background: "rgba(244, 114, 182, 0.15)", color: "#f9a8d4" } },
+      coordinator: { label: "Coordinator", icon: "📚", style: { background: "rgba(245, 158, 11, 0.15)", color: "#fbbf24" } }
+    };
+    return roleMap[role] || { label: "Student", icon: "👤", style: { background: "rgba(16, 185, 129, 0.15)", color: "#34d399" } };
+  };
+
+  const canManageUser = (targetUser) => {
+    if (currentUser?.id === targetUser.id) {
+      return false;
+    }
+    if (currentUser?.role === "admin") {
+      return true;
+    }
+    if (currentUser?.role === "moderator") {
+      return !["admin", "moderator"].includes(targetUser.role);
+    }
+    return false;
+  };
+
+  const getAvailableRoles = (targetUser) => {
+    if (currentUser?.role === "admin") {
+      return ["student", "coordinator", "cr", "lr", "moderator", "admin"];
+    }
+    if (currentUser?.role === "moderator") {
+      return ["student", "coordinator", "cr", "lr"];
+    }
+    return [];
+  };
+
+  const canViewMemberSince = () => {
+    return ["admin", "moderator", "cr", "lr"].includes(currentUser?.role);
+  };
+
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(search.toLowerCase()) ||
-      user.roll_no.toLowerCase().includes(search.toLowerCase())
+      user.roll_no.toLowerCase().includes(search.toLowerCase()) ||
+      user.role.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const leadershipRoles = ["admin", "moderator", "cr", "lr", "coordinator"];
+  const roleOrder = {
+    admin: 1,
+    moderator: 2,
+    cr: 3,
+    lr: 4,
+    coordinator: 5
+  };
+
+  let leadershipUsers = filteredUsers.filter(user =>
+    leadershipRoles.includes(user.role)
+  );
+  leadershipUsers.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+
+  const regularUsers = filteredUsers.filter(user =>
+    !leadershipRoles.includes(user.role)
   );
 
   const stats = {
     total: users.length,
-    admins: users.filter((u) => u.role === "admin").length,
+    leadership: users.filter(u => leadershipRoles.includes(u.role)).length,
     students: users.filter((u) => u.role === "student").length
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
   };
 
   const styles = {
@@ -96,192 +172,177 @@ function Users() {
     heading: {
       color: "#ffffff",
       fontSize: "28px",
-      marginBottom: "8px"
+      marginBottom: "6px",
+      fontWeight: "600"
     },
     subheading: {
-      color: "#a0aec0",
+      color: "#94a3b8",
       fontSize: "14px",
-      marginBottom: "25px"
+      marginBottom: "24px"
     },
     statsGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-      gap: "15px",
-      marginBottom: "25px"
+      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+      gap: "12px",
+      marginBottom: "24px"
     },
     statCard: {
-      background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
-      padding: "16px",
-      borderRadius: "12px",
+      background: "#1a1f3a",
+      padding: "14px",
+      borderRadius: "10px",
       border: "1px solid #2d3748",
       textAlign: "center"
     },
     statValue: {
       color: "#ffffff",
-      fontSize: "28px",
-      fontWeight: "700",
-      marginBottom: "4px"
+      fontSize: "24px",
+      fontWeight: "600",
+      marginBottom: "2px"
     },
     statLabel: {
       color: "#94a3b8",
-      fontSize: "13px"
+      fontSize: "12px"
     },
     searchBox: {
       width: "100%",
-      padding: "12px 16px",
+      padding: "10px 14px",
       borderRadius: "10px",
       border: "1px solid #2d3748",
       backgroundColor: "#1a1f3a",
       color: "#ffffff",
       fontSize: "14px",
       outline: "none",
-      transition: "all 0.2s",
       marginBottom: "20px",
       boxSizing: "border-box"
     },
+    sectionTitle: {
+      color: "#ffffff",
+      fontSize: "18px",
+      fontWeight: "500",
+      marginBottom: "14px",
+      marginTop: "20px"
+    },
     userCard: {
       background: "#1a1f3a",
-      borderRadius: "12px",
-      padding: "20px",
-      marginBottom: "12px",
+      borderRadius: "10px",
+      padding: "14px",
+      marginBottom: "8px",
       border: "1px solid #2d3748",
-      transition: "all 0.3s ease"
+      transition: "border-color 0.15s"
     },
     userCardContent: {
       display: "flex",
       alignItems: "center",
-      gap: "16px",
+      gap: "14px",
       flexWrap: "wrap"
     },
     avatar: {
-      width: "55px",
-      height: "55px",
+      width: "48px",
+      height: "48px",
       borderRadius: "50%",
       background: "linear-gradient(135deg, #667eea, #764ba2)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       color: "white",
-      fontWeight: "700",
-      fontSize: "22px",
+      fontWeight: "600",
+      fontSize: "18px",
       flexShrink: 0
     },
-    userDetails: {
+    userInfo: {
       flex: 1,
-      minWidth: "180px"
+      minWidth: "160px"
+    },
+    userNameRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flexWrap: "wrap",
+      marginBottom: "4px"
     },
     userName: {
       color: "#ffffff",
-      fontSize: "18px",
-      fontWeight: "600",
-      margin: "0 0 6px 0",
+      fontSize: "16px",
+      fontWeight: "500",
+      margin: 0
+    },
+    userMeta: {
       display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      flexWrap: "wrap"
+      flexDirection: "column",
+      gap: "2px"
     },
     userRollNo: {
       color: "#94a3b8",
       fontSize: "13px",
-      margin: 0,
-      display: "flex",
-      alignItems: "center",
-      gap: "6px"
+      margin: 0
     },
     memberSince: {
-      color: "#94a3b8",
+      color: "#64748b",
       fontSize: "12px",
-      marginTop: "6px"
+      margin: 0
     },
     roleBadge: {
       display: "inline-flex",
       alignItems: "center",
-      padding: "4px 12px",
-      borderRadius: "20px",
-      fontSize: "12px",
-      fontWeight: "600"
-    },
-    roleAdmin: {
-      background: "rgba(236, 72, 153, 0.2)",
-      color: "#f472b6"
-    },
-    roleStudent: {
-      background: "rgba(16, 185, 129, 0.2)",
-      color: "#34d399"
+      gap: "4px",
+      padding: "2px 10px",
+      borderRadius: "14px",
+      fontSize: "11px",
+      fontWeight: "500"
     },
     buttonGroup: {
       display: "flex",
-      gap: "10px",
-      flexWrap: "wrap"
+      gap: "6px",
+      flexWrap: "wrap",
+      alignItems: "center"
     },
-    buttonMakeAdmin: {
-      background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      padding: "8px 16px",
-      cursor: "pointer",
+    roleSelect: {
+      background: "#0f172a",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      borderRadius: "6px",
+      padding: "5px 8px",
       fontSize: "12px",
-      fontWeight: "600",
-      transition: "all 0.2s"
-    },
-    buttonMakeStudent: {
-      background: "linear-gradient(135deg, #10b981, #059669)",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      padding: "8px 16px",
       cursor: "pointer",
-      fontSize: "12px",
-      fontWeight: "600",
-      transition: "all 0.2s"
+      outline: "none"
     },
     buttonDelete: {
       background: "linear-gradient(135deg, #ef4444, #dc2626)",
       color: "white",
       border: "none",
-      borderRadius: "8px",
-      padding: "8px 16px",
+      borderRadius: "6px",
+      padding: "5px 12px",
       cursor: "pointer",
       fontSize: "12px",
-      fontWeight: "600",
-      transition: "all 0.2s"
+      fontWeight: "500",
+      transition: "opacity 0.15s"
     },
     buttonDisabled: {
-      opacity: 0.6,
+      opacity: 0.5,
       cursor: "not-allowed"
     },
     loadingContainer: {
       textAlign: "center",
       padding: "60px",
       background: "#1a1f3a",
-      borderRadius: "12px",
+      borderRadius: "10px",
       border: "1px solid #2d3748"
-    },
-    spinner: {
-      width: "40px",
-      height: "40px",
-      border: "3px solid #2d3748",
-      borderTopColor: "#667eea",
-      borderRadius: "50%",
-      animation: "spin 1s linear infinite",
-      margin: "0 auto 16px"
     },
     emptyContainer: {
       textAlign: "center",
       padding: "60px",
       background: "#1a1f3a",
-      borderRadius: "12px",
+      borderRadius: "10px",
       border: "1px solid #2d3748"
     },
     emptyIcon: {
-      fontSize: "48px",
-      marginBottom: "16px"
+      fontSize: "40px",
+      marginBottom: "12px"
     },
     emptyTitle: {
       color: "#ffffff",
       fontSize: "18px",
-      marginBottom: "8px"
+      marginBottom: "6px"
     },
     emptyText: {
       color: "#94a3b8",
@@ -297,13 +358,7 @@ function Users() {
         <div style={styles.container}>
           <div style={styles.content}>
             <div style={styles.loadingContainer}>
-              <div style={styles.spinner}></div>
               <p style={{ color: "#94a3b8" }}>Loading users...</p>
-              <style>{`
-                @keyframes spin {
-                  to { transform: rotate(360deg); }
-                }
-              `}</style>
             </div>
           </div>
         </div>
@@ -316,28 +371,27 @@ function Users() {
       <Navbar />
       <div style={styles.container}>
         <div style={styles.content}>
-          <h1 style={styles.heading}>👥 Users</h1>
-          <p style={styles.subheading}>Manage students and administrators</p>
+          <h1 style={styles.heading}>👥 Class Directory</h1>
+          <p style={styles.subheading}>View class members and leadership roles</p>
 
-          {/* Stats Bar */}
           <div style={styles.statsGrid}>
             <div style={styles.statCard}>
               <div style={styles.statValue}>{stats.total}</div>
-              <div style={styles.statLabel}>Total Users</div>
+              <div style={styles.statLabel}>Total Members</div>
             </div>
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{stats.admins}</div>
-              <div style={styles.statLabel}>👑 Admins</div>
+              <div style={styles.statValue}>{stats.leadership}</div>
+              <div style={styles.statLabel}>Leadership</div>
             </div>
             <div style={styles.statCard}>
               <div style={styles.statValue}>{stats.students}</div>
-              <div style={styles.statLabel}>🎓 Students</div>
+              <div style={styles.statLabel}>Students</div>
             </div>
           </div>
 
           <input
             type="text"
-            placeholder="🔍 Search by name or roll number..."
+            placeholder="Search by name, roll number, or role..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={styles.searchBox}
@@ -352,82 +406,149 @@ function Users() {
               <p style={styles.emptyText}>Try a different search term</p>
             </div>
           ) : (
-            filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                style={styles.userCard}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateX(5px)";
-                  e.currentTarget.style.borderColor = "#667eea";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateX(0)";
-                  e.currentTarget.style.borderColor = "#2d3748";
-                }}
-              >
-                <div style={styles.userCardContent}>
-                  <div style={styles.avatar}>
-                    {getInitials(user.name)}
-                  </div>
-                  
-                  <div style={styles.userDetails}>
-                    <div style={styles.userName}>
-                      {user.name}
-                      <span
-                        style={{
-                          ...styles.roleBadge,
-                          ...(user.role === "admin" ? styles.roleAdmin : styles.roleStudent)
-                        }}
-                      >
-                        {user.role === "admin" ? "👑 Admin" : "🎓 Student"}
-                      </span>
-                    </div>
-                    <p style={styles.userRollNo}>
-                      <span>🎫</span> Roll No: {user.roll_no}
-                    </p>
-
-                    <p style={styles.memberSince}>
-                      📅 Member Since:{" "}
-                      {new Date(user.created_at).toLocaleDateString("en-GB")}
-                    </p>
-                  </div>
-
-                  <div style={styles.buttonGroup}>
-                    <button
-                      onClick={() => toggleRole(user.id)}
-                      disabled={updating === user.id}
-                      style={{
-                        ...(user.role === "admin" ? styles.buttonMakeStudent : styles.buttonMakeAdmin),
-                        ...(updating === user.id ? styles.buttonDisabled : {})
-                      }}
-                      onMouseEnter={(e) => {
-                        if (updating !== user.id) e.currentTarget.style.opacity = "0.85";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = "1";
-                      }}
+            <>
+              {leadershipUsers.length > 0 && (
+                <>
+                  <h2 style={styles.sectionTitle}>👑 Leadership</h2>
+                  {leadershipUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      style={styles.userCard}
                     >
-                      {updating === user.id
-                        ? "⏳ Updating..."
-                        : user.role === "admin"
-                        ? "⬇ Make Student"
-                        : "⬆ Make Admin"}
-                    </button>
+                      <div style={styles.userCardContent}>
+                        <div style={styles.avatar}>
+                          {getInitials(user.name)}
+                        </div>
 
-                    {user.role !== "admin" && (
-                      <button
-                        onClick={() => deleteUser(user.id)}
-                        style={styles.buttonDelete}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                      >
-                        🗑 Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
+                        <div style={styles.userInfo}>
+                          <div style={styles.userNameRow}>
+                            <span style={styles.userName}>{user.name}</span>
+                            <span
+                              style={{
+                                ...styles.roleBadge,
+                                ...getRoleInfo(user.role).style
+                              }}
+                            >
+                              {getRoleInfo(user.role).icon} {getRoleInfo(user.role).label}
+                            </span>
+                          </div>
+                          <div style={styles.userMeta}>
+                            <p style={styles.userRollNo}>Roll No: {user.roll_no}</p>
+                            {canViewMemberSince() && user.created_at && (
+                              <p style={styles.memberSince}>
+                                Member Since: {formatDate(user.created_at)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={styles.buttonGroup}>
+                          {canManageUser(user) && (
+                            <select
+                              value={user.role}
+                              disabled={updating === user.id}
+                              onChange={(e) => updateRole(user.id, e.target.value)}
+                              style={{
+                                ...styles.roleSelect,
+                                ...(updating === user.id ? styles.buttonDisabled : {})
+                              }}
+                            >
+                              {getAvailableRoles(user).map((role) => (
+                                <option key={role} value={role}>
+                                  {getRoleInfo(role).icon} {getRoleInfo(role).label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {canManageUser(user) && (
+                            <button
+                              onClick={() => deleteUser(user.id)}
+                              style={styles.buttonDelete}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {regularUsers.length > 0 && (
+                <>
+                  <h2 style={styles.sectionTitle}>👥 Class Members</h2>
+                  {regularUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      style={styles.userCard}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#667eea")}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#2d3748")}
+                    >
+                      <div style={styles.userCardContent}>
+                        <div style={styles.avatar}>
+                          {getInitials(user.name)}
+                        </div>
+
+                        <div style={styles.userInfo}>
+                          <div style={styles.userNameRow}>
+                            <span style={styles.userName}>{user.name}</span>
+                            <span
+                              style={{
+                                ...styles.roleBadge,
+                                ...getRoleInfo(user.role).style
+                              }}
+                            >
+                              {getRoleInfo(user.role).icon} {getRoleInfo(user.role).label}
+                            </span>
+                          </div>
+                          <div style={styles.userMeta}>
+                            <p style={styles.userRollNo}>Roll No: {user.roll_no}</p>
+                            {canViewMemberSince() && user.created_at && (
+                              <p style={styles.memberSince}>
+                                Member Since: {formatDate(user.created_at)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={styles.buttonGroup}>
+                          {canManageUser(user) && (
+                            <select
+                              value={user.role}
+                              disabled={updating === user.id}
+                              onChange={(e) => updateRole(user.id, e.target.value)}
+                              style={{
+                                ...styles.roleSelect,
+                                ...(updating === user.id ? styles.buttonDisabled : {})
+                              }}
+                            >
+                              {getAvailableRoles(user).map((role) => (
+                                <option key={role} value={role}>
+                                  {getRoleInfo(role).icon} {getRoleInfo(role).label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {canManageUser(user) && (
+                            <button
+                              onClick={() => deleteUser(user.id)}
+                              style={styles.buttonDelete}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>

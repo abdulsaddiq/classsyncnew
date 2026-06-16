@@ -188,6 +188,22 @@ def delete_file(file_id):
             "error": "File not found"
         }), 404
 
+    privileged_roles = [
+        "admin",
+        "moderator",
+        "cr",
+        "lr",
+        "coordinator"
+    ]
+
+    if (
+        file.uploaded_by != user.id
+        and user.role not in privileged_roles
+    ):
+        return jsonify({
+            "error": "You can only delete your own uploads"
+        }), 403
+
     file.is_deleted = True
 
     db.session.commit()

@@ -4,6 +4,10 @@ from models.user import User
 from flask_jwt_extended import create_access_token
 import bcrypt
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from utils.permissions import SUPER_ROLES
+from utils.permissions import USER_VIEW_ROLES
+
+
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -101,7 +105,11 @@ def profile():
     user_id = get_jwt_identity()
 
     user = User.query.get(user_id)
-
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
+    
     return jsonify({
         "id": user.id,
         "name": user.name,
@@ -117,11 +125,10 @@ def get_users():
     user_id = get_jwt_identity()
 
     user = User.query.get(user_id)
-
-    if user.role != "admin":
+    if not user:
         return jsonify({
-            "error": "Admin access required"
-        }), 403
+            "error": "User not found"
+        }), 404
 
     users = User.query.all()
 
@@ -145,22 +152,25 @@ def delete_user(user_id):
     current_user = User.query.get(
         current_user_id
     )
+    if not current_user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
 
-    if current_user.role != "admin":
+    if current_user.role not in SUPER_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403
 
     user = User.query.get(user_id)
-
     if not user:
         return jsonify({
             "error": "User not found"
         }), 404
 
-    if user.role == "admin":
+    if user.role in ["admin", "moderator"]:
         return jsonify({
-            "error": "Cannot delete admin"
+            "error": "Cannot delete admin or moderator"
         }), 400
 
     db.session.delete(user)
@@ -176,26 +186,61 @@ def update_role(user_id):
 
     current_user_id = get_jwt_identity()
 
+
     current_user = User.query.get(
         current_user_id
     )
+    if not current_user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
 
-    if current_user.role != "admin":
+    if current_user.role not in SUPER_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403
 
     user = User.query.get(user_id)
-
     if not user:
         return jsonify({
             "error": "User not found"
         }), 404
 
-    if user.role == "admin":
-        user.role = "student"
-    else:
-        user.role = "admin"
+    data = request.get_json()
+
+    new_role = data.get("role")
+
+    if (
+        current_user.role == "moderator"
+        and new_role in ["admin", "moderator"]
+    ):
+        return jsonify({
+            "error": "Moderators cannot assign admin or moderator roles"
+        }), 403
+
+    valid_roles = [
+        "admin",
+        "moderator",
+        "cr",
+        "lr",
+        "coordinator",
+        "student"
+    ]
+
+    if new_role not in valid_roles:
+        return jsonify({
+            "error": "Invalid role"
+        }), 400
+    
+    if (
+        current_user.role == "moderator"
+        and user.role in ["admin", "moderator"]
+    ):
+        return jsonify({
+            "error": "Cannot modify admin or moderator accounts"
+        }), 403
+
+    user.role = new_role
 
     db.session.commit()
 
@@ -211,8 +256,12 @@ def get_stats():
     user_id = get_jwt_identity()
 
     user = User.query.get(user_id)
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
 
-    if user.role != "admin":
+    if user.role not in SUPER_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403

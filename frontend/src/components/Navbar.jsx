@@ -16,6 +16,11 @@ function Navbar() {
     window.location.href = "/";
   };
 
+  // Role-based visibility helpers
+  const canViewManagement = () => {
+    return user && ["admin", "moderator", "cr", "lr", "coordinator"].includes(user.role);
+  };
+
   const linkStyle = {
     padding: "8px 16px",
     textDecoration: "none",
@@ -66,16 +71,16 @@ function Navbar() {
             <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcements</Link>
             
             {/* Visible to everyone */}
-            <Link to="/create-announcement" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcement</Link>
-            <Link to="/upload-file" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Upload</Link>
-            <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Assignment</Link>
+            <Link to="/create-announcement" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Create Announcement</Link>
+            <Link to="/upload-file" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Upload Notes</Link>
+            <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Create Assignment</Link>
+            <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Class Directory</Link>
             
-            {/* Admin only */}
-            {user?.role === "admin" && (
+            {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
+            {canViewManagement() && (
               <>
-                <Link to="/create-subject" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Subjects</Link>
-                <Link to="/create-folder" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Folders</Link>
-                <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Users</Link>
+                <Link to="/create-subject" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Manage Subjects</Link>
+                <Link to="/create-folder" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Manage Folders</Link>
               </>
             )}
           </div>
@@ -115,15 +120,15 @@ function Navbar() {
           
           {/* Visible to everyone */}
           <Link to="/create-announcement" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Announcement</Link>
-          <Link to="/upload-file" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Upload File</Link>
-          <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignment</Link>
+          <Link to="/upload-file" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Upload Notes</Link>
+          <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Assignment</Link>
+          <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Class Directory</Link>
           
-          {/* Admin only */}
-          {user?.role === "admin" && (
+          {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
+          {canViewManagement() && (
             <>
-              <Link to="/create-subject" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Subject</Link>
-              <Link to="/create-folder" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Folder</Link>
-              <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Users</Link>
+              <Link to="/create-subject" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Manage Subjects</Link>
+              <Link to="/create-folder" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Manage Folders</Link>
             </>
           )}
         </div>

@@ -10,6 +10,7 @@ from flask_jwt_extended import (
 from models import db
 from models.user import User
 from models.folder import Folder
+from utils.permissions import ACADEMIC_ROLES
 
 folders_bp = Blueprint(
     "folders",
@@ -25,7 +26,7 @@ def create_folder():
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
+    if user.role not in ACADEMIC_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403
@@ -132,7 +133,7 @@ def delete_folder(folder_id):
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
+    if user.role not in ACADEMIC_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403

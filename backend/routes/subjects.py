@@ -10,6 +10,7 @@ from flask_jwt_extended import (
 from models import db
 from models.user import User
 from models.subject import Subject
+from utils.permissions import ACADEMIC_ROLES
 
 subjects_bp = Blueprint(
     "subjects",
@@ -25,7 +26,7 @@ def create_subject():
 
     user = User.query.get(user_id)
 
-    if user.role != "admin":
+    if user.role not in ACADEMIC_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403
@@ -98,7 +99,7 @@ def delete_subject(subject_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
 
-    if user.role != "admin":
+    if user.role not in ACADEMIC_ROLES:
         return jsonify({
             "error": "Admin access required"
         }), 403
