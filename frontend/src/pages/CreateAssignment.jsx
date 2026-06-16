@@ -209,8 +209,7 @@ function CreateAssignment() {
       background: "linear-gradient(135deg, #1a1f3a 0%, #13172e 100%)",
       borderRadius: "16px",
       padding: "24px",
-      border: "2px solid #a78bfa",
-      boxShadow: "0 0 20px rgba(167, 139, 250, 0.15)",
+      border: "1px solid #a78bfa",
       transition: "all 0.3s ease"
     },
     summaryTitle: {
@@ -365,12 +364,10 @@ function CreateAssignment() {
                 onMouseEnter={(e) => {
                   if (!creating && title.trim() && subjectId) {
                     e.currentTarget.style.opacity = "0.85";
-                    e.currentTarget.style.transform = "translateY(-2px)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.opacity = "1";
-                  e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
                 {creating ? "⏳ Creating..." : "🚀 Create Assignment"}
@@ -378,7 +375,7 @@ function CreateAssignment() {
 
               <div style={styles.infoBox}>
                 <p style={styles.infoText}>
-                  💡 Students will see this assignment in their dashboard
+                  💡 This assignment will appear inside the selected subject page
                 </p>
               </div>
             </div>

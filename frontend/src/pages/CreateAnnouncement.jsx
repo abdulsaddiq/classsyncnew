@@ -244,7 +244,7 @@ function CreateAnnouncement() {
             {/* Form Section */}
             <div style={styles.formSection}>
               <h1 style={styles.heading}>📢 Create Announcement</h1>
-              <p style={styles.subheading}>Share important updates with students</p>
+              <p style={styles.subheading}>Share important updates with the class</p>
 
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: "20px" }}>
@@ -290,12 +290,10 @@ function CreateAnnouncement() {
                   onMouseEnter={(e) => {
                     if (!creating && title.trim() && content.trim()) {
                       e.currentTarget.style.opacity = "0.85";
-                      e.currentTarget.style.transform = "translateY(-2px)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.opacity = "1";
-                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
                   {creating ? "⏳ Creating..." : "📢 Post Announcement"}
@@ -303,7 +301,7 @@ function CreateAnnouncement() {
 
                 <div style={styles.infoBox}>
                   <p style={styles.infoText}>
-                    💡 Type badge appears automatically based on keywords
+                    💡 Any member can create announcements to help keep classmates informed.
                   </p>
                 </div>
               </form>
