@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import api from "../services/api";
@@ -23,6 +23,7 @@ function Dashboard() {
     const [announcements, setAnnouncements] = useState([]);
     const [stats, setStats] = useState(null);
     const [activities, setActivities] = useState([]);
+    const [timetable, setTimetable] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const getRoleDisplay = (role) => {
@@ -37,6 +38,23 @@ function Dashboard() {
         return roleMap[role] || roleMap.student;
     };
 
+    const getDayName = () => {
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        return days[new Date().getDay()];
+    };
+
+    const isLab = (name) => name?.toLowerCase().includes("lab");
+
+    const getTimeValue = (timeStr) => {
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 60 + minutes;
+    };
+
+    const getCurrentTimeValue = () => {
+        const now = new Date();
+        return now.getHours() * 60 + now.getMinutes();
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
@@ -49,7 +67,8 @@ function Dashboard() {
 
                 await Promise.all([
                     fetchAnnouncements(headers),
-                    fetchActivities(headers)
+                    fetchActivities(headers),
+                    fetchTimetable(headers)
                 ]);
 
                 if (userData.role === "admin") {
@@ -94,8 +113,73 @@ function Dashboard() {
             }
         };
 
+        const fetchTimetable = async (headers) => {
+            try {
+                const response = await api.get("/timetable", { headers });
+                setTimetable(response.data);
+            } catch (error) {
+                console.error("Error fetching timetable:", error);
+            }
+        };
+
         initializeDashboard();
     }, []);
+
+    // Memoized today's classes
+    const todayData = useMemo(() => {
+        const today = getDayName();
+        const currentTime = getCurrentTimeValue();
+
+        // Get unique entries (remove duplicates by day + start_time)
+        const seen = new Set();
+        const uniqueEntries = timetable.filter(entry => {
+            const key = `${entry.day}-${entry.start_time}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        // Filter today's classes and sort by time
+        const todayClasses = uniqueEntries
+            .filter(entry => entry.day === today)
+            .sort((a, b) => getTimeValue(a.start_time) - getTimeValue(b.start_time));
+
+        // Find active class (current time between start and end)
+        let activeClass = null;
+        let nextClass = null;
+
+        for (const entry of todayClasses) {
+            const start = getTimeValue(entry.start_time);
+            const end = getTimeValue(entry.end_time);
+            
+            if (currentTime >= start && currentTime <= end) {
+                activeClass = entry;
+                break;
+            }
+            if (currentTime < start) {
+                nextClass = entry;
+                break;
+            }
+        }
+
+        // If no active class found, find the next upcoming class
+        if (!activeClass && todayClasses.length > 0) {
+            for (const entry of todayClasses) {
+                const start = getTimeValue(entry.start_time);
+                if (currentTime < start) {
+                    nextClass = entry;
+                    break;
+                }
+            }
+        }
+
+        return {
+            today,
+            classes: todayClasses,
+            activeClass,
+            nextClass
+        };
+    }, [timetable]);
 
     if (loading) {
         return (
@@ -261,6 +345,177 @@ function Dashboard() {
                     onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
                         <FaBook style={{ color: "#667eea", fontSize: "16px" }} />
                         <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Browse Subjects</span>
+                    </Link>
+                </div>
+
+                {/* Today's Classes */}
+                <div style={{
+                    background: "#1a1f3a",
+                    borderRadius: "12px",
+                    border: "1px solid #2d3748",
+                    padding: "20px",
+                    marginBottom: "30px"
+                }}>
+                    <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "12px",
+                        marginBottom: "16px"
+                    }}>
+                        <div>
+                            <h2 style={{
+                                color: "#ffffff",
+                                fontSize: "20px",
+                                margin: 0,
+                                fontWeight: "500"
+                            }}>
+                                📅 Today's Classes
+                            </h2>
+                            <p style={{
+                                color: "#94a3b8",
+                                fontSize: "13px",
+                                margin: "4px 0 0 0"
+                            }}>
+                                {todayData.today} Schedule
+                            </p>
+                        </div>
+                        <span style={{
+                            color: "#94a3b8",
+                            fontSize: "13px"
+                        }}>
+                            Today's Classes: {todayData.classes.length}
+                        </span>
+                    </div>
+
+                    {todayData.classes.length === 0 ? (
+                        <div style={{
+                            textAlign: "center",
+                            padding: "30px",
+                            color: "#94a3b8",
+                            fontSize: "14px"
+                        }}>
+                            📅 No classes scheduled today
+                            <div style={{ fontSize: "13px", marginTop: "4px", color: "#64748b" }}>
+                                Enjoy your free day!
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            {todayData.classes.map((entry) => {
+                                const lab = isLab(entry.subject_name);
+                                const isActive = todayData.activeClass?.id === entry.id;
+                                const isNext = todayData.nextClass?.id === entry.id && !isActive;
+
+                                return (
+                                    <div
+                                        key={entry.id}
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "10px 12px",
+                                            borderBottom: "1px solid #2d3748",
+                                            flexWrap: "wrap",
+                                            gap: "8px",
+                                            ...(isActive ? {
+                                                background: "rgba(16, 185, 129, 0.08)",
+                                                borderRadius: "6px",
+                                                marginBottom: "2px"
+                                            } : {}),
+                                            ...(isNext ? {
+                                                background: "rgba(96, 165, 250, 0.08)",
+                                                borderRadius: "6px",
+                                                marginBottom: "2px"
+                                            } : {})
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+                                            <span style={{ fontSize: "18px" }}>
+                                                {lab ? "🧪" : "📚"}
+                                            </span>
+                                            <div>
+                                                <div style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "8px",
+                                                    flexWrap: "wrap"
+                                                }}>
+                                                    <span style={{
+                                                        color: "#ffffff",
+                                                        fontSize: "14px",
+                                                        fontWeight: "500"
+                                                    }}>
+                                                        {entry.subject_name}
+                                                    </span>
+                                                    {isActive && (
+                                                        <span style={{
+                                                            background: "rgba(16, 185, 129, 0.15)",
+                                                            color: "#34d399",
+                                                            fontSize: "10px",
+                                                            fontWeight: "600",
+                                                            padding: "2px 8px",
+                                                            borderRadius: "12px"
+                                                        }}>
+                                                            NOW
+                                                        </span>
+                                                    )}
+                                                    {isNext && !isActive && (
+                                                        <span style={{
+                                                            background: "rgba(96, 165, 250, 0.15)",
+                                                            color: "#60a5fa",
+                                                            fontSize: "10px",
+                                                            fontWeight: "600",
+                                                            padding: "2px 8px",
+                                                            borderRadius: "12px"
+                                                        }}>
+                                                            NEXT
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {entry.room && lab && (
+                                                    <div style={{
+                                                        color: "#94a3b8",
+                                                        fontSize: "12px"
+                                                    }}>
+                                                        🏫 {entry.room}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            color: "#94a3b8",
+                                            fontSize: "13px",
+                                            whiteSpace: "nowrap"
+                                        }}>
+                                            {entry.start_time} - {entry.end_time}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <Link
+                        to="/timetable"
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            marginTop: "16px",
+                            paddingTop: "14px",
+                            borderTop: "1px solid #2d3748",
+                            color: "#667eea",
+                            textDecoration: "none",
+                            fontSize: "14px",
+                            transition: "gap 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
+                        onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
+                    >
+                        View Full Timetable <FaArrowRight style={{ fontSize: "12px" }} />
                     </Link>
                 </div>
 
@@ -544,51 +799,10 @@ function Dashboard() {
                         </div>
                     </div>
                 </div>
-
-                {/* Timetable Section */}
-                <div style={{ marginBottom: "30px" }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        marginBottom: "15px",
-                        flexWrap: "wrap"
-                    }}>
-                        <FaCalendarAlt style={{ color: "#a78bfa", fontSize: "clamp(18px, 4vw, 22px)" }} />
-                        <h2 style={{
-                            color: "#ffffff",
-                            margin: 0,
-                            fontSize: "clamp(18px, 4vw, 22px)",
-                            fontWeight: "500"
-                        }}>
-                            Today's Schedule
-                        </h2>
-                        <div style={{
-                            height: "2px",
-                            flex: 1,
-                            background: "linear-gradient(90deg, #a78bfa, transparent)"
-                        }}></div>
-                    </div>
-
-                    <div style={{
-                        background: "#1a1f3a",
-                        padding: "clamp(30px, 5vw, 40px)",
-                        borderRadius: "12px",
-                        border: "1px solid #2d3748",
-                        textAlign: "center"
-                    }}>
-                        <div style={{ fontSize: "32px", marginBottom: "12px" }}>📅</div>
-                        <h3 style={{ color: "#ffffff", marginBottom: "8px", fontWeight: "500" }}>No Timetable Available</h3>
-                        <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
-                            Timetable integration will appear here when configured.
-                        </p>
-                    </div>
-                </div>
             </div>
 
             <style>
                 {`
-                    /* Custom scrollbar */
                     ::-webkit-scrollbar {
                         width: 6px;
                     }

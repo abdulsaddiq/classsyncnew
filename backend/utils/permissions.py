@@ -19,3 +19,10 @@ USER_VIEW_ROLES = [
     "coordinator",
     "student"
 ]
+
+TIMETABLE_EDIT_ROLES = [
+    "admin",
+    "moderator",
+    "cr",
+    "lr"
+]

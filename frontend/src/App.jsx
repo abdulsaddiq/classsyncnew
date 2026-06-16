@@ -12,6 +12,10 @@ import UploadFile from "./pages/UploadFile";
 import Users from "./pages/Users";
 import CreateAssignment from "./pages/CreateAssignment";
 import Signup from "./pages/Signup";
+import Timetable from "./pages/Timetable";
+
+
+
 
 
 function App() {
@@ -82,6 +86,11 @@ function App() {
         <Route
           path="/signup"
           element={<Signup />}
+        />
+
+        <Route
+          path="/timetable"
+          element={<Timetable />}
         />
 
       </Routes>

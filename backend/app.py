@@ -16,7 +16,7 @@ from routes.activities import activities_bp
 from utils.supabase_client import supabase
 from models.comment import Comment
 from routes.comments import comments_bp
-
+from routes.timetables import timetables_bp
 
 
 
@@ -87,6 +87,11 @@ app.register_blueprint(
 app.register_blueprint(
     comments_bp,
     url_prefix="/api/comments"
+)
+
+app.register_blueprint(
+    timetables_bp,
+    url_prefix="/api/timetable"
 )
 
 with app.app_context():
