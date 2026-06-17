@@ -19,7 +19,29 @@ function Assignments() {
   const [completionMessage, setCompletionMessage] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const canManage = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
+
+  const roleRank = {
+    admin: 5,
+    moderator: 4,
+    cr: 3,
+    lr: 3,
+    coordinator: 2,
+    student: 1
+  };
+
+  const canManageAssignment = (assignment) => {
+    if (!user) return false;
+    
+    // User can manage their own assignment
+    if (assignment.created_by_id === user.id) {
+      return true;
+    }
+
+    // User can manage if their role rank is higher than creator's role rank
+    return (
+      roleRank[user?.role] > roleRank[assignment.created_by_role]
+    );
+  };
 
   useEffect(() => {
     fetchData();
@@ -63,7 +85,6 @@ function Assignments() {
         )
       );
 
-      // Show feedback message
       if (completed) {
         setCompletionMessage({
           id: assignmentId,
@@ -113,6 +134,18 @@ function Assignments() {
     if (daysLeft === 0) return "📅 Due Today";
     if (daysLeft <= 3) return `⚠️ ${daysLeft} days left`;
     return `⏳ ${daysLeft} days left`;
+  };
+
+  const getFileIcon = (fileType) => {
+    if (!fileType) return "📎";
+    const type = fileType.toLowerCase();
+    if (type.includes("pdf")) return "📄";
+    if (type.includes("doc")) return "📘";
+    if (type.includes("ppt")) return "📊";
+    if (type.includes("zip") || type.includes("rar")) return "📦";
+    if (type.includes("png") || type.includes("jpg") || type.includes("jpeg") || 
+        type.includes("gif") || type.includes("webp")) return "🖼️";
+    return "📎";
   };
 
   const openEditModal = (assignment) => {
@@ -368,6 +401,58 @@ function Assignments() {
     dueText: {
       fontWeight: "bold",
       fontSize: "13px"
+    },
+    attachmentBlock: {
+      marginTop: "12px",
+      background: "#141a35",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "10px",
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+      flexWrap: "wrap"
+    },
+    attachmentInfo: {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      flex: 1,
+      minWidth: "120px"
+    },
+    attachmentIcon: {
+      fontSize: "22px"
+    },
+    attachmentName: {
+      color: "#e2e8f0",
+      fontSize: "13px",
+      fontWeight: "500"
+    },
+    attachmentButtons: {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap"
+    },
+    attachmentButton: {
+      padding: "4px 12px",
+      borderRadius: "6px",
+      fontSize: "12px",
+      fontWeight: "500",
+      cursor: "pointer",
+      transition: "opacity 0.15s",
+      border: "none",
+      textDecoration: "none",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "4px"
+    },
+    viewButton: {
+      background: "#667eea",
+      color: "white"
+    },
+    downloadButton: {
+      background: "#10b981",
+      color: "white"
     },
     actionButtons: {
       display: "flex",
@@ -645,6 +730,9 @@ function Assignments() {
               const daysLeft = getDaysLeft(assignment.due_date);
               const statusColor = getStatusColor(daysLeft, assignment.completed);
               const isCompleted = assignment.completed === true;
+              const hasAttachment = assignment.file_url;
+              const fileIcon = getFileIcon(assignment.file_type);
+              const canManage = canManageAssignment(assignment);
               
               return (
                 <div
@@ -697,6 +785,34 @@ function Assignments() {
                             {getStatusText(daysLeft, isCompleted)}
                           </div>
                         </div>
+
+                        {/* Attachment Section */}
+                        {hasAttachment && (
+                          <div style={styles.attachmentBlock}>
+                            <div style={styles.attachmentInfo}>
+                              <span style={styles.attachmentIcon}>{fileIcon}</span>
+                              <span style={styles.attachmentName}>{assignment.file_name || "Attachment"}</span>
+                            </div>
+                            <div style={styles.attachmentButtons}>
+                              <button
+                                onClick={() => window.open(assignment.file_url, "_blank")}
+                                style={{ ...styles.attachmentButton, ...styles.viewButton }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                              >
+                                👁 View
+                              </button>
+                              <button
+                                onClick={() => window.open(`${assignment.file_url}?download=${assignment.file_name || "file"}`, "_blank")}
+                                style={{ ...styles.attachmentButton, ...styles.downloadButton }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                              >
+                                ⬇ Download
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -46,7 +46,11 @@ def create_assignment():
         description=data.get("description"),
         subject_id=data.get("subject_id"),
         due_date=due_date,
-        created_by=user.id
+        created_by=user.id,
+
+        file_url=data.get("file_url"),
+        file_name=data.get("file_name"),
+        file_type=data.get("file_type")
     )
 
     db.session.add(assignment)
@@ -108,6 +112,9 @@ def get_assignments():
             "title": assignment.title,
             "description": assignment.description,
             "subject_id": assignment.subject_id,
+            "file_url": assignment.file_url,
+            "file_name": assignment.file_name,
+            "file_type": assignment.file_type,
 
             "subject_name": (
                 subject.name
@@ -165,6 +172,9 @@ def get_subject_assignments(subject_id):
             "title": assignment.title,
             "description": assignment.description,
             "subject_id": assignment.subject_id,
+            "file_url": assignment.file_url,
+            "file_name": assignment.file_name,
+            "file_type": assignment.file_type,
 
             "subject_name": (
                 Subject.query.get(
@@ -263,6 +273,10 @@ def delete_assignment(assignment_id):
             "error": "Permission denied"
         }), 403
     
+    AssignmentCompletion.query.filter_by(
+        assignment_id=assignment.id
+    ).delete()
+    
     db.session.delete(assignment)
 
     db.session.commit()
@@ -344,6 +358,22 @@ def update_assignment(assignment_id):
         )
     else:
         assignment.due_date = None
+
+
+    assignment.file_url = data.get(
+        "file_url",
+        assignment.file_url
+    )
+
+    assignment.file_name = data.get(
+        "file_name",
+        assignment.file_name
+    )
+
+    assignment.file_type = data.get(
+        "file_type",
+        assignment.file_type
+    )
 
     db.session.commit()
 

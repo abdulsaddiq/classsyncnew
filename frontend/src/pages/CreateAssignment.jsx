@@ -9,6 +9,7 @@ function CreateAssignment() {
   const [dueDate, setDueDate] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [creating, setCreating] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -39,13 +40,35 @@ function CreateAssignment() {
     setCreating(true);
     try {
       const token = localStorage.getItem("token");
+      let fileData = { file_url: null, file_name: null, file_type: null };
+
+      // Upload file if selected
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const uploadRes = await api.post("/files/upload-assignment", formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        fileData = {
+          file_url: uploadRes.data.file_url,
+          file_name: uploadRes.data.file_name,
+          file_type: uploadRes.data.file_type
+        };
+      }
+
+      // Create assignment with file data
       await api.post(
         "/assignments",
         {
           title,
           description,
           subject_id: subjectId,
-          due_date: dueDate || null
+          due_date: dueDate || null,
+          file_url: fileData.file_url,
+          file_name: fileData.file_name,
+          file_type: fileData.file_type
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -55,9 +78,15 @@ function CreateAssignment() {
       setDescription("");
       setSubjectId("");
       setDueDate("");
+      setSelectedFile(null);
+      
+      // Reset file input
+      const fileInput = document.getElementById("file-input");
+      if (fileInput) fileInput.value = "";
+      
     } catch (error) {
       console.error(error);
-      alert("❌ Failed to create assignment");
+      alert(error.response?.data?.error || "❌ Failed to create assignment");
     } finally {
       setCreating(false);
     }
@@ -68,7 +97,7 @@ function CreateAssignment() {
   };
 
   const selectedSubject = getSelectedSubject();
-  const hasSummary = title.trim() || subjectId || dueDate;
+  const hasSummary = title.trim() || subjectId || dueDate || selectedFile;
 
   const formatDate = (date) => {
     if (!date) return null;
@@ -187,6 +216,29 @@ function CreateAssignment() {
       outline: "none",
       transition: "all 0.2s",
       boxSizing: "border-box"
+    },
+    fileInput: {
+      width: "100%",
+      padding: "10px",
+      borderRadius: "10px",
+      border: "1px solid #2d3748",
+      backgroundColor: "#1a1f3a",
+      color: "#ffffff",
+      fontSize: "14px",
+      outline: "none",
+      transition: "all 0.2s",
+      boxSizing: "border-box",
+      cursor: "pointer"
+    },
+    fileName: {
+      color: "#10b981",
+      fontSize: "13px",
+      marginTop: "6px",
+      padding: "6px 12px",
+      background: "rgba(16, 185, 129, 0.1)",
+      borderRadius: "8px",
+      border: "1px solid rgba(16, 185, 129, 0.2)",
+      display: "inline-block"
     },
     button: {
       width: "100%",
@@ -341,7 +393,7 @@ function CreateAssignment() {
                 </select>
               </div>
 
-              <div style={{ marginBottom: "25px" }}>
+              <div style={{ marginBottom: "20px" }}>
                 <label style={styles.label}>📅 Due Date (Optional)</label>
                 <input
                   type="date"
@@ -352,6 +404,22 @@ function CreateAssignment() {
                   onFocus={(e) => (e.currentTarget.style.borderColor = "#a78bfa")}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "#2d3748")}
                 />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={styles.label}>📎 Assignment Attachment (Optional)</label>
+                <input
+                  id="file-input"
+                  type="file"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  style={styles.fileInput}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.zip,.rar"
+                />
+                {selectedFile && (
+                  <div style={styles.fileName}>
+                    ✅ {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </div>
+                )}
               </div>
 
               <button
@@ -370,7 +438,12 @@ function CreateAssignment() {
                   e.currentTarget.style.opacity = "1";
                 }}
               >
-                {creating ? "⏳ Creating..." : "🚀 Create Assignment"}
+                {creating 
+                  ? selectedFile 
+                    ? "⏳ Uploading & Creating..." 
+                    : "⏳ Creating..." 
+                  : "🚀 Create Assignment"
+                }
               </button>
 
               <div style={styles.infoBox}>
@@ -424,6 +497,16 @@ function CreateAssignment() {
                         <div style={{ marginTop: "8px", fontSize: "13px", color: "#cbd5e0" }}>
                           {formatDate(dueDate)}
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedFile && (
+                    <div style={styles.summaryItem}>
+                      <div style={styles.summaryIcon}>📎</div>
+                      <div style={styles.summaryLabel}>Attachment</div>
+                      <div style={{ ...styles.summaryValue, color: "#10b981" }}>
+                        {selectedFile.name}
                       </div>
                     </div>
                   )}

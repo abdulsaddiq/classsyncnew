@@ -224,3 +224,50 @@ def delete_file(file_id):
     return jsonify({
         "message": "File deleted"
     })
+
+@files_bp.route(
+    "/upload-assignment",
+    methods=["POST"]
+)
+@jwt_required()
+def upload_assignment_file():
+
+    uploaded_file = request.files.get("file")
+
+    if not uploaded_file:
+        return jsonify({
+            "error": "No file provided"
+        }), 400
+
+    filename = secure_filename(
+        uploaded_file.filename
+    )
+
+    unique_filename = (
+        f"{uuid.uuid4()}_{filename}"
+    )
+
+    file_bytes = uploaded_file.read()
+
+    supabase.storage.from_(
+        "classsync-files"
+    ).upload(
+        unique_filename,
+        file_bytes,
+        {
+            "content-type":
+            uploaded_file.content_type
+        }
+    )
+
+    file_url = supabase.storage.from_(
+        "classsync-files"
+    ).get_public_url(
+        unique_filename
+    )
+
+    return jsonify({
+        "file_url": file_url,
+        "file_name": filename,
+        "file_type": uploaded_file.content_type
+    }), 200

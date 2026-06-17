@@ -30,6 +30,21 @@ class Assignment(db.Model):
         nullable=True
     )
 
+    file_url = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    file_name = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    file_type = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
     created_by = db.Column(
         db.Integer,
         db.ForeignKey("users.id")
@@ -48,4 +63,10 @@ class Assignment(db.Model):
     creator = db.relationship(
         "User",
         backref="assignments"
+    )
+
+    completions = db.relationship(
+    "AssignmentCompletion",
+    backref="assignment",
+    cascade="all, delete-orphan"
     )

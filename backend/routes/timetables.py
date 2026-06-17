@@ -8,7 +8,7 @@ from models import db
 from models.user import User
 from models.subject import Subject
 from models.timetable import Timetable
-
+import time
 from utils.permissions import (
     ACADEMIC_ROLES,
     TIMETABLE_EDIT_ROLES
@@ -74,28 +74,43 @@ def create_timetable():
 @jwt_required()
 def get_timetable():
 
+    start = time.time()
+
     entries = Timetable.query.order_by(
         Timetable.day.asc()
     ).all()
 
-    return jsonify([
-        {
+    subjects = {
+        subject.id: subject.name
+        for subject in Subject.query.all()
+    }
+
+    response = []
+
+    for entry in entries:
+
+        response.append({
             "id": entry.id,
             "subject_id": entry.subject_id,
-            "subject_name": (
-                Subject.query.get(
-                    entry.subject_id
-                ).name
-                if entry.subject_id
-                else "Unknown"
+
+            "subject_name": subjects.get(
+                entry.subject_id,
+                "Unknown"
             ),
+
             "day": entry.day,
             "start_time": entry.start_time,
             "end_time": entry.end_time,
             "room": entry.room
-        }
-        for entry in entries
-    ])
+        })
+
+    print(
+        "TIMETABLE ROUTE:",
+        round(time.time() - start, 3),
+        "seconds"
+    )
+
+    return jsonify(response)
 
 
 @timetables_bp.route(

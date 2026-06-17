@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 import api from "../services/api";
@@ -9,7 +9,6 @@ import {
     FaFile,
     FaUsers,
     FaBullhorn,
-    FaFire,
     FaArrowRight,
     FaPlus,
     FaUpload,
@@ -18,18 +17,29 @@ import {
     FaCalendarAlt
 } from "react-icons/fa";
 
+// Cache keys
+const CACHE_KEYS = {
+    USER: "dashboard_user",
+    TIMETABLE: "dashboard_timetable",
+    ASSIGNMENTS: "dashboard_assignments",
+    STATS: "dashboard_stats",
+    TIMESTAMP: "dashboard_timestamp"
+};
+
+const CACHE_DURATION = 60000; // 1 minute
+
 function Dashboard() {
     const [user, setUser] = useState(null);
-    const [announcements, setAnnouncements] = useState([]);
     const [stats, setStats] = useState(null);
-    const [activities, setActivities] = useState([]);
     const [timetable, setTimetable] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [dataLoaded, setDataLoaded] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const canManage = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
 
-    const getRoleDisplay = (role) => {
+    const getRoleDisplay = useCallback((role) => {
         const roleMap = {
             admin: { label: "ADMIN", icon: "👑", color: "#f472b6", bg: "rgba(236, 72, 153, 0.2)" },
             moderator: { label: "MODERATOR", icon: "🛡", color: "#c084fc", bg: "rgba(168, 85, 247, 0.2)" },
@@ -39,126 +49,140 @@ function Dashboard() {
             student: { label: "STUDENT", icon: "👤", color: "#34d399", bg: "rgba(16, 185, 129, 0.2)" }
         };
         return roleMap[role] || roleMap.student;
-    };
+    }, []);
 
-    const getDayName = () => {
+    const getDayName = useCallback(() => {
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         return days[new Date().getDay()];
-    };
+    }, []);
 
-    const isLab = (name) => name?.toLowerCase().includes("lab");
+    const isLab = useCallback((name) => name?.toLowerCase().includes("lab"), []);
 
-    const getTimeValue = (timeStr) => {
+    const getTimeValue = useCallback((timeStr) => {
         const [hours, minutes] = timeStr.split(":").map(Number);
         return hours * 60 + minutes;
-    };
+    }, []);
 
-    const getCurrentTimeValue = () => {
+    const getCurrentTimeValue = useCallback(() => {
         const now = new Date();
         return now.getHours() * 60 + now.getMinutes();
-    };
+    }, []);
 
-    const getDaysLeft = (dueDate) => {
+    const getDaysLeft = useCallback((dueDate) => {
         if (!dueDate) return null;
         const diff = Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24));
         return diff;
-    };
+    }, []);
 
-    const getStatusColor = (daysLeft) => {
+    const getStatusColor = useCallback((daysLeft) => {
         if (daysLeft === null) return "#94a3b8";
         if (daysLeft < 0) return "#ef4444";
         if (daysLeft === 0) return "#f59e0b";
         if (daysLeft <= 3) return "#f59e0b";
         return "#a78bfa";
-    };
+    }, []);
 
-    const getStatusText = (daysLeft) => {
+    const getStatusText = useCallback((daysLeft) => {
         if (daysLeft === null) return "No due date";
         if (daysLeft < 0) return "❌ Overdue";
         if (daysLeft === 0) return "📅 Due Today";
         if (daysLeft <= 3) return `⚠️ ${daysLeft} days left`;
         return `⏳ ${daysLeft} days left`;
-    };
+    }, []);
 
+    // Load cached data on mount
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
+        const loadCachedData = () => {
+            const timestamp = sessionStorage.getItem(CACHE_KEYS.TIMESTAMP);
+            const now = Date.now();
+            
+            // Check if cache is valid
+            if (timestamp && (now - parseInt(timestamp)) < CACHE_DURATION) {
+                const cachedUser = sessionStorage.getItem(CACHE_KEYS.USER);
+                const cachedTimetable = sessionStorage.getItem(CACHE_KEYS.TIMETABLE);
+                const cachedAssignments = sessionStorage.getItem(CACHE_KEYS.ASSIGNMENTS);
+                const cachedStats = sessionStorage.getItem(CACHE_KEYS.STATS);
 
-        const initializeDashboard = async () => {
+                if (cachedUser) setUser(JSON.parse(cachedUser));
+                if (cachedTimetable) setTimetable(JSON.parse(cachedTimetable));
+                if (cachedAssignments) setAssignments(JSON.parse(cachedAssignments));
+                if (cachedStats) setStats(JSON.parse(cachedStats));
+                
+                if (cachedUser) {
+                    setDataLoaded(true);
+                    setLoading(false);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        const hasCache = loadCachedData();
+        
+        // Always fetch fresh data in background
+        fetchDashboardData(hasCache);
+    }, []);
+
+    const fetchDashboardData = async (hasCache = false) => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
+            const headers = { Authorization: `Bearer ${token}` };
+
+            // Create all promises
+            const profilePromise = api.get("/auth/profile", { headers });
+            const timetablePromise = api.get("/timetable", { headers });
+            const assignmentsPromise = api.get("/assignments", { headers });
+            const statsPromise = api.get("/auth/stats", { headers }).catch(() => null);
+
+            // Run all in parallel
+            const [profileRes, timetableRes, assignmentsRes, statsRes] = await Promise.all([
+                profilePromise,
+                timetablePromise,
+                assignmentsPromise,
+                statsPromise
+            ]);
+
+            const userData = profileRes.data;
+            
+            // Update state
+            setUser(userData);
+            setTimetable(timetableRes.data);
+            setAssignments(assignmentsRes.data);
+            if (statsRes && statsRes.data) {
+                setStats(statsRes.data);
+            }
+            setDataLoaded(true);
+            setLoading(false);
+
+            // Cache data
             try {
-                const profileResponse = await api.get("/auth/profile", { headers });
-                const userData = profileResponse.data;
-                setUser(userData);
-
-                await Promise.all([
-                    fetchAnnouncements(headers),
-                    fetchActivities(headers),
-                    fetchTimetable(headers),
-                    fetchAssignments(headers)
-                ]);
-
-                if (userData.role === "admin") {
-                    await fetchStats(headers);
+                sessionStorage.setItem(CACHE_KEYS.USER, JSON.stringify(userData));
+                sessionStorage.setItem(CACHE_KEYS.TIMETABLE, JSON.stringify(timetableRes.data));
+                sessionStorage.setItem(CACHE_KEYS.ASSIGNMENTS, JSON.stringify(assignmentsRes.data));
+                if (statsRes && statsRes.data) {
+                    sessionStorage.setItem(CACHE_KEYS.STATS, JSON.stringify(statsRes.data));
                 }
-            } catch (error) {
-                console.error("Error initializing dashboard:", error);
-                if (error.response?.status === 401) {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    window.location.href = "/";
-                }
-            } finally {
+                sessionStorage.setItem(CACHE_KEYS.TIMESTAMP, String(Date.now()));
+            } catch (e) {
+                // Session storage full or unavailable
+            }
+        } catch (error) {
+            console.error("Error initializing dashboard:", error);
+            if (error.response?.status === 401) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                window.location.href = "/";
+            }
+            if (!hasCache) {
                 setLoading(false);
             }
-        };
-
-        const fetchAnnouncements = async (headers) => {
-            try {
-                const response = await api.get("/announcements", { headers });
-                setAnnouncements(response.data);
-            } catch (error) {
-                console.error("Error fetching announcements:", error);
-            }
-        };
-
-        const fetchStats = async (headers) => {
-            try {
-                const response = await api.get("/auth/stats", { headers });
-                setStats(response.data);
-            } catch (error) {
-                console.error("Error fetching stats:", error);
-            }
-        };
-
-        const fetchActivities = async (headers) => {
-            try {
-                const response = await api.get("/activities", { headers });
-                setActivities(response.data);
-            } catch (error) {
-                console.error("Error fetching activities:", error);
-            }
-        };
-
-        const fetchTimetable = async (headers) => {
-            try {
-                const response = await api.get("/timetable", { headers });
-                setTimetable(response.data);
-            } catch (error) {
-                console.error("Error fetching timetable:", error);
-            }
-        };
-
-        const fetchAssignments = async (headers) => {
-            try {
-                const response = await api.get("/assignments", { headers });
-                setAssignments(response.data);
-            } catch (error) {
-                console.error("Error fetching assignments:", error);
-            }
-        };
-
-        initializeDashboard();
-    }, []);
+        }
+    };
 
     // Memoized today's classes
     const todayData = useMemo(() => {
@@ -210,7 +234,7 @@ function Dashboard() {
             activeClass,
             nextClass
         };
-    }, [timetable]);
+    }, [timetable, getDayName, getCurrentTimeValue, getTimeValue]);
 
     // Memoized upcoming deadlines (only upcoming, not overdue)
     const upcomingAssignments = useMemo(() => {
@@ -221,9 +245,10 @@ function Dashboard() {
             })
             .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
             .slice(0, 5);
-    }, [assignments]);
+    }, [assignments, getDaysLeft]);
 
-    if (loading) {
+    // Show loading only on first visit
+    if (loading && !dataLoaded) {
         return (
             <div style={{
                 display: "flex",
@@ -447,7 +472,7 @@ function Dashboard() {
                     </Link>
                 </div>
 
-                {/* Upcoming Deadlines - Moved Up */}
+                {/* Upcoming Deadlines */}
                 <div style={styles.card}>
                     <div style={{
                         display: "flex",
@@ -720,206 +745,6 @@ function Dashboard() {
                         ))}
                     </div>
                 )}
-
-                {/* Two Column Layout */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                    gap: "clamp(20px, 4vw, 30px)",
-                    marginBottom: "30px"
-                }}>
-                    {/* Recent Activity */}
-                    <div>
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "15px",
-                            flexWrap: "wrap"
-                        }}>
-                            <FaFire style={{ color: "#f97316", fontSize: "clamp(18px, 4vw, 20px)" }} />
-                            <h2 style={{
-                                color: "#ffffff",
-                                margin: 0,
-                                fontSize: "clamp(18px, 4vw, 20px)",
-                                fontWeight: "500"
-                            }}>
-                                Recent Activity ({activities.length})
-                            </h2>
-                        </div>
-
-                        <div style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                            maxHeight: "400px",
-                            overflowY: "auto"
-                        }}>
-                            {activities.length > 0 ? (
-                                activities.slice(0, 5).map((activity) => (
-                                    <div
-                                        key={activity.id}
-                                        style={{
-                                            ...styles.card,
-                                            marginBottom: 0,
-                                            padding: "clamp(12px, 3vw, 14px)",
-                                            display: "flex",
-                                            alignItems: "flex-start",
-                                            gap: "10px",
-                                            border: "1px solid #2d3748"
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f97316"}
-                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
-                                    >
-                                        <div style={{
-                                            width: "6px",
-                                            height: "6px",
-                                            borderRadius: "50%",
-                                            backgroundColor: "#f97316",
-                                            marginTop: "8px",
-                                            flexShrink: 0
-                                        }}></div>
-                                        <p style={{
-                                            margin: 0,
-                                            color: "#cbd5e0",
-                                            fontSize: "clamp(12px, 3.5vw, 14px)",
-                                            lineHeight: "1.5",
-                                            wordBreak: "break-word"
-                                        }}>
-                                            {activity.message}
-                                        </p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div style={{
-                                    ...styles.card,
-                                    marginBottom: 0,
-                                    textAlign: "center",
-                                    color: "#94a3b8",
-                                    fontSize: "14px",
-                                    padding: "clamp(30px, 8vw, 40px)"
-                                }}>
-                                    No recent activities yet
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Announcements */}
-                    <div>
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "15px",
-                            flexWrap: "wrap"
-                        }}>
-                            <h2 style={{
-                                color: "#ffffff",
-                                margin: 0,
-                                fontSize: "clamp(18px, 4vw, 20px)",
-                                fontWeight: "500"
-                            }}>
-                                📢 Announcements ({announcements.length})
-                            </h2>
-                        </div>
-
-                        <div style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "10px",
-                            maxHeight: "400px",
-                            overflowY: "auto"
-                        }}>
-                            {announcements.slice(0, 3).map((announcement) => {
-                                const creatorRole = getRoleDisplay(announcement.created_by_role);
-                                
-                                return (
-                                    <div
-                                        key={announcement.id}
-                                        style={{
-                                            ...styles.card,
-                                            marginBottom: 0,
-                                            padding: "clamp(14px, 4vw, 18px)",
-                                            border: "1px solid #2d3748"
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
-                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
-                                    >
-                                        <h3 style={{
-                                            margin: "0 0 6px 0",
-                                            color: "#667eea",
-                                            fontSize: "clamp(14px, 4vw, 17px)",
-                                            fontWeight: "500",
-                                            wordBreak: "break-word"
-                                        }}>
-                                            {announcement.title}
-                                        </h3>
-                                        <div style={{
-                                            display: "flex",
-                                            gap: "8px",
-                                            marginBottom: "8px",
-                                            flexWrap: "wrap",
-                                            alignItems: "center"
-                                        }}>
-                                            <span style={{
-                                                color: "#94a3b8",
-                                                fontSize: "12px"
-                                            }}>
-                                                By {announcement.created_by || "Admin"}
-                                            </span>
-                                            {announcement.created_by_role && (
-                                                <span style={{
-                                                    padding: "2px 8px",
-                                                    borderRadius: "12px",
-                                                    fontSize: "10px",
-                                                    fontWeight: "600",
-                                                    backgroundColor: creatorRole.bg,
-                                                    color: creatorRole.color
-                                                }}>
-                                                    {creatorRole.icon} {creatorRole.label}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p style={{
-                                            margin: 0,
-                                            color: "#cbd5e0",
-                                            lineHeight: "1.5",
-                                            fontSize: "clamp(12px, 3.5vw, 14px)",
-                                            wordBreak: "break-word"
-                                        }}>
-                                            {announcement.content.length > 120 
-                                                ? announcement.content.substring(0, 120) + "..." 
-                                                : announcement.content}
-                                        </p>
-                                    </div>
-                                );
-                            })}
-                            {announcements.length === 0 && (
-                                <div style={{
-                                    ...styles.card,
-                                    marginBottom: 0,
-                                    textAlign: "center",
-                                    color: "#94a3b8",
-                                    fontSize: "14px",
-                                    padding: "clamp(30px, 8vw, 40px)"
-                                }}>
-                                    No announcements yet
-                                </div>
-                            )}
-                            {announcements.length > 3 && (
-                                <Link
-                                    to="/announcements"
-                                    style={styles.link}
-                                    onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                                    onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                                >
-                                    View All Announcements <FaArrowRight style={{ fontSize: "12px" }} />
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <style>
