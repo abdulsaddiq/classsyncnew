@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
@@ -74,6 +73,16 @@ def get_assignments():
 
     assignments = Assignment.query.all()
 
+    users = {
+        user.id: user
+        for user in User.query.all()
+    }
+
+    subjects = {
+        subject.id: subject
+        for subject in Subject.query.all()
+    }
+
     completions = {
         c.assignment_id
         for c in AssignmentCompletion.query.filter_by(
@@ -86,11 +95,11 @@ def get_assignments():
 
     for assignment in assignments:
 
-        creator = User.query.get(
+        creator = users.get(
             assignment.created_by
         )
 
-        subject = Subject.query.get(
+        subject = subjects.get(
             assignment.subject_id
         )
 
@@ -134,6 +143,7 @@ def get_assignments():
                 else "student"
             )
         })
+
 
     return jsonify(response)
 

@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from models.folder import Folder
 
-
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity
@@ -66,6 +65,7 @@ def create_subject():
 def get_subjects():
 
     subjects = Subject.query.all()
+
 
     return jsonify([
         {

@@ -7,8 +7,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from utils.permissions import SUPER_ROLES
 from utils.permissions import USER_VIEW_ROLES
 
-
-
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -109,6 +107,7 @@ def profile():
         return jsonify({
             "error": "User not found"
         }), 404
+    
     
     return jsonify({
         "id": user.id,

@@ -39,3 +39,13 @@ class Assignment(db.Model):
         db.DateTime,
         server_default=db.func.now()
     )
+
+    subject = db.relationship(
+        "Subject",
+        backref="assignments"
+    )
+
+    creator = db.relationship(
+        "User",
+        backref="assignments"
+    )
