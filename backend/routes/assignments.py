@@ -69,67 +69,73 @@ def create_assignment():
 @assignments_bp.route("", methods=["GET"])
 @jwt_required()
 def get_assignments():
+
     user_id = get_jwt_identity()
 
     assignments = Assignment.query.all()
 
-    return jsonify([
-        {
+    completions = {
+        c.assignment_id
+        for c in AssignmentCompletion.query.filter_by(
+            user_id=user_id,
+            completed=True
+        ).all()
+    }
+
+    response = []
+
+    for assignment in assignments:
+
+        creator = User.query.get(
+            assignment.created_by
+        )
+
+        subject = Subject.query.get(
+            assignment.subject_id
+        )
+
+        response.append({
             "id": assignment.id,
             "title": assignment.title,
             "description": assignment.description,
             "subject_id": assignment.subject_id,
 
             "subject_name": (
-                Subject.query.get(
-                assignment.subject_id
-            ).name
-            if assignment.subject_id
-            else None
+                subject.name
+                if subject
+                else None
             ),
 
             "completed": (
-                AssignmentCompletion.query.filter_by(
-                    assignment_id=assignment.id,
-                    user_id=user_id,
-                    completed=True
-                ).first()
-                is not None
+                assignment.id in completions
             ),
-
 
             "due_date": (
                 assignment.due_date.strftime("%Y-%m-%d")
                 if assignment.due_date
                 else None
             ),
+
             "created_by": (
-                User.query.get(
-                    assignment.created_by
-                ).name
-                if assignment.created_by
+                creator.name
+                if creator
                 else "Unknown"
             ),
 
             "created_by_id": (
-                User.query.get(
-                    assignment.created_by
-                ).id
-                if assignment.created_by
+                creator.id
+                if creator
                 else None
             ),
 
             "created_by_role": (
-                    User.query.get(
-                    assignment.created_by
-                ).role
-                if assignment.created_by
+                creator.role
+                if creator
                 else "student"
             )
-        }
-        for assignment in assignments
-    ])
+        })
 
+    return jsonify(response)
 
 @assignments_bp.route(
     "/subject/<int:subject_id>",
