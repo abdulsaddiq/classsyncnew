@@ -6,6 +6,9 @@ function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState({ title: "", content: "" });
+  const [submitting, setSubmitting] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
 
   const ROLE_LEVELS = {
@@ -17,15 +20,15 @@ function Announcements() {
     admin: 5
   };
 
-  const canDeleteAnnouncement = (announcement) => {
+  const canManageAnnouncement = (announcement) => {
     if (!user) return false;
 
-    // User can delete their own announcement
+    // User can edit/delete their own announcement
     if (announcement.created_by_id === user.id) {
       return true;
     }
 
-    // User can delete if their role is higher than creator's role
+    // User can manage if their role is higher than creator's role
     return (
       ROLE_LEVELS[user.role] > ROLE_LEVELS[announcement.created_by_role]
     );
@@ -67,6 +70,52 @@ function Announcements() {
       alert("❌ Failed to delete announcement");
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const openEditModal = (announcement) => {
+    setEditing(announcement.id);
+    setEditForm({
+      title: announcement.title,
+      content: announcement.content
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditing(null);
+    setEditForm({ title: "", content: "" });
+  };
+
+  const handleEditSave = async () => {
+    if (!editForm.title.trim()) {
+      alert("Please enter a title");
+      return;
+    }
+    if (!editForm.content.trim()) {
+      alert("Please enter content");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      await api.put(
+        `/announcements/${editing}`,
+        {
+          title: editForm.title,
+          content: editForm.content
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      await fetchAnnouncements();
+      closeEditModal();
+      alert("✅ Announcement updated successfully");
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.error || "❌ Failed to update announcement");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -198,6 +247,23 @@ function Announcements() {
       lineHeight: "1.6",
       margin: 0
     },
+    actionButtons: {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap",
+      alignItems: "center"
+    },
+    editButton: {
+      background: "#667eea",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      padding: "6px 14px",
+      cursor: "pointer",
+      fontSize: "12px",
+      fontWeight: "600",
+      transition: "opacity 0.15s"
+    },
     deleteButton: {
       background: "linear-gradient(135deg, #ef4444, #dc2626)",
       color: "white",
@@ -244,6 +310,105 @@ function Announcements() {
       color: "#94a3b8",
       fontSize: "14px",
       margin: 0
+    },
+    overlay: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "rgba(0,0,0,0.7)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999,
+      padding: "20px"
+    },
+    modal: {
+      background: "#1a1f3a",
+      borderRadius: "14px",
+      padding: "28px",
+      maxWidth: "500px",
+      width: "100%",
+      border: "1px solid #2d3748"
+    },
+    modalTitle: {
+      color: "#ffffff",
+      fontSize: "22px",
+      marginBottom: "4px"
+    },
+    modalSub: {
+      color: "#94a3b8",
+      fontSize: "13px",
+      marginBottom: "18px"
+    },
+    label: {
+      color: "#cbd5e0",
+      fontSize: "13px",
+      fontWeight: "500",
+      display: "block",
+      marginBottom: "4px"
+    },
+    input: {
+      width: "100%",
+      padding: "10px",
+      borderRadius: "8px",
+      border: "1px solid #2d3748",
+      background: "#0f172a",
+      color: "#fff",
+      fontSize: "14px",
+      outline: "none",
+      marginBottom: "14px",
+      boxSizing: "border-box",
+      transition: "border-color 0.15s"
+    },
+    textarea: {
+      width: "100%",
+      padding: "10px",
+      borderRadius: "8px",
+      border: "1px solid #2d3748",
+      background: "#0f172a",
+      color: "#fff",
+      fontSize: "14px",
+      outline: "none",
+      marginBottom: "14px",
+      boxSizing: "border-box",
+      fontFamily: "inherit",
+      resize: "vertical",
+      transition: "border-color 0.15s"
+    },
+    modalButtons: {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap"
+    },
+    saveButton: {
+      flex: 1,
+      padding: "10px",
+      background: "#667eea",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "opacity 0.15s",
+      minWidth: "70px"
+    },
+    cancelButton: {
+      padding: "10px 18px",
+      background: "#2d3748",
+      color: "white",
+      border: "none",
+      borderRadius: "8px",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "opacity 0.15s"
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+      cursor: "not-allowed"
     }
   };
 
@@ -280,6 +445,7 @@ function Announcements() {
             announcements.map((announcement) => {
               const announcementType = getAnnouncementType(announcement.title, announcement.content);
               const relativeTime = getRelativeTime(announcement.created_at);
+              const canManage = canManageAnnouncement(announcement);
               
               return (
                 <div
@@ -334,23 +500,33 @@ function Announcements() {
                       )}
                     </div>
                     
-                    {canDeleteAnnouncement(announcement) && (
-                      <button
-                        onClick={() => deleteAnnouncement(announcement.id, announcement.title)}
-                        disabled={deleting === announcement.id}
-                        style={{
-                          ...styles.deleteButton,
-                          ...(deleting === announcement.id ? styles.deleteButtonDisabled : {})
-                        }}
-                        onMouseEnter={(e) => {
-                          if (deleting !== announcement.id) e.currentTarget.style.opacity = "0.85";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = "1";
-                        }}
-                      >
-                        {deleting === announcement.id ? "⏳ Deleting..." : "🗑 Delete"}
-                      </button>
+                    {canManage && (
+                      <div style={styles.actionButtons}>
+                        <button
+                          onClick={() => openEditModal(announcement)}
+                          style={styles.editButton}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => deleteAnnouncement(announcement.id, announcement.title)}
+                          disabled={deleting === announcement.id}
+                          style={{
+                            ...styles.deleteButton,
+                            ...(deleting === announcement.id ? styles.deleteButtonDisabled : {})
+                          }}
+                          onMouseEnter={(e) => {
+                            if (deleting !== announcement.id) e.currentTarget.style.opacity = "0.85";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                        >
+                          {deleting === announcement.id ? "⏳ Deleting..." : "🗑 Delete"}
+                        </button>
+                      </div>
                     )}
                   </div>
                   
@@ -361,6 +537,67 @@ function Announcements() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editing && (
+        <div style={styles.overlay} onClick={() => !submitting && closeEditModal()}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>✏️ Edit Announcement</h2>
+            <p style={styles.modalSub}>Update announcement details</p>
+
+            <label style={styles.label}>Title</label>
+            <input
+              type="text"
+              placeholder="Announcement title"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              style={styles.input}
+              disabled={submitting}
+              onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+              onBlur={(e) => e.currentTarget.style.borderColor = "#2d3748"}
+            />
+
+            <label style={styles.label}>Content</label>
+            <textarea
+              placeholder="Announcement content"
+              value={editForm.content}
+              onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+              rows="5"
+              style={styles.textarea}
+              disabled={submitting}
+              onFocus={(e) => e.currentTarget.style.borderColor = "#667eea"}
+              onBlur={(e) => e.currentTarget.style.borderColor = "#2d3748"}
+            />
+
+            <div style={styles.modalButtons}>
+              <button
+                onClick={handleEditSave}
+                disabled={submitting}
+                style={{
+                  ...styles.saveButton,
+                  ...(submitting ? styles.buttonDisabled : {})
+                }}
+                onMouseEnter={(e) => {
+                  if (!submitting) e.currentTarget.style.opacity = "0.85";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >
+                {submitting ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={() => !submitting && closeEditModal()}
+                style={styles.cancelButton}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = "0.85"}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
