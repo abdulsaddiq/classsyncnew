@@ -269,5 +269,5 @@ def upload_assignment_file():
     return jsonify({
         "file_url": file_url,
         "file_name": filename,
-        "file_type": uploaded_file.content_type
+        "file_type": uploaded_file.content_type,
     }), 200

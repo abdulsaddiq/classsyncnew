@@ -16,24 +16,23 @@ function Navbar() {
     window.location.href = "/";
   };
 
-  // Role-based visibility helpers
   const canViewManagement = () => {
     return user && ["admin", "moderator", "cr", "lr", "coordinator"].includes(user.role);
   };
 
   const linkStyle = {
-    padding: "8px 16px",
+    padding: "8px 14px",
     textDecoration: "none",
     color: "#e2e8f0",
     fontWeight: "500",
     borderRadius: "8px",
-    transition: "all 0.2s ease",
-    fontSize: "14px",
+    transition: "border-color 0.15s",
+    fontSize: "13px",
+    border: "1px solid transparent"
   };
 
   const linkHover = {
-    backgroundColor: "rgba(102, 126, 234, 0.1)",
-    color: "#a78bfa",
+    borderColor: "rgba(102, 126, 234, 0.2)"
   };
 
   return (
@@ -49,13 +48,13 @@ function Navbar() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "12px 24px",
+          padding: "10px 20px",
           maxWidth: "1400px",
           margin: "0 auto",
         }}>
           {/* Logo */}
           <div style={{
-            fontSize: "22px",
+            fontSize: "20px",
             fontWeight: "800",
             background: "linear-gradient(135deg, #a78bfa, #ec4899)",
             WebkitBackgroundClip: "text",
@@ -66,44 +65,95 @@ function Navbar() {
           </div>
 
           {/* Desktop Nav */}
-          <div style={{ display: "flex", gap: "4px", alignItems: "center" }} className="desktop-nav">
-            <Link to="/dashboard" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Dashboard</Link>
-            <Link to="/subjects" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Subjects</Link>
-            <Link to="/assignments" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Assignments</Link>
-            <Link to="/timetable" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Timetable</Link>
-            <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Announcements</Link>
-            <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Class Directory</Link>
+          <div style={{ display: "flex", gap: "2px", alignItems: "center" }} className="desktop-nav">
+            <Link to="/dashboard" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Dashboard</Link>
+            <Link to="/subjects" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Subjects</Link>
+            <Link to="/assignments" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Assignments</Link>
+            <Link to="/timetable" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Timetable</Link>
+            <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Announcements</Link>
+            <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Class Directory</Link>
             
-            {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
             {canViewManagement() && (
               <>
-                <Link to="/create-subject" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Manage Subjects</Link>
-                <Link to="/create-folder" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { backgroundColor: "transparent", color: "#e2e8f0" })}>Manage Folders</Link>
+                <Link to="/create-subject" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Manage Subjects</Link>
+                <Link to="/manage-folders" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Manage Folders</Link>
               </>
             )}
           </div>
 
-          {/* User Area */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {/* User Area - Compact */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {user && (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 12px", background: "#1a1a2e", borderRadius: "24px", border: "1px solid #2d2d44" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "linear-gradient(135deg, #a78bfa, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "bold", fontSize: "14px" }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "4px 10px",
+                background: "#1a1a2e",
+                borderRadius: "20px",
+                border: "1px solid #2d2d44"
+              }}>
+                <div style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #a78bfa, #ec4899)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "12px"
+                }}>
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
-                <span style={{ color: "#e2e8f0", fontWeight: "500", fontSize: "14px" }}>{user.name}</span>
+                <span style={{ color: "#e2e8f0", fontWeight: "500", fontSize: "13px" }}>{user.name}</span>
                 {user.role && (
-                  <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "20px", background: user.role === "admin" ? "rgba(236, 72, 153, 0.2)" : "rgba(16, 185, 129, 0.2)", color: user.role === "admin" ? "#f472b6" : "#34d399", fontWeight: "600" }}>
+                  <span style={{
+                    fontSize: "10px",
+                    padding: "2px 8px",
+                    borderRadius: "14px",
+                    background: user.role === "admin" ? "rgba(236, 72, 153, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    color: user.role === "admin" ? "#f472b6" : "#34d399",
+                    fontWeight: "600"
+                  }}>
                     {user.role}
                   </span>
                 )}
               </div>
             )}
-            <button onClick={logout} style={{ padding: "6px 18px", background: "linear-gradient(135deg, #dc2626, #b91c1c)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "13px", transition: "all 0.2s" }}
-              onMouseEnter={(e) => { e.target.style.opacity = "0.85"; e.target.style.transform = "scale(1.02)" }}
-              onMouseLeave={(e) => { e.target.style.opacity = "1"; e.target.style.transform = "scale(1)" }}>
+            <button
+              onClick={logout}
+              style={{
+                padding: "5px 14px",
+                background: "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                fontWeight: "600",
+                cursor: "pointer",
+                fontSize: "12px",
+                transition: "opacity 0.15s"
+              }}
+              onMouseEnter={(e) => e.target.style.opacity = "0.85"}
+              onMouseLeave={(e) => e.target.style.opacity = "1"}
+            >
               Logout
             </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: "none", background: "#1a1a2e", border: "1px solid #2d2d44", borderRadius: "8px", fontSize: "20px", cursor: "pointer", padding: "6px 12px", color: "#a78bfa" }} className="mobile-menu-btn">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{
+                display: "none",
+                background: "#1a1a2e",
+                border: "1px solid #2d2d44",
+                borderRadius: "6px",
+                fontSize: "18px",
+                cursor: "pointer",
+                padding: "4px 10px",
+                color: "#a78bfa"
+              }}
+              className="mobile-menu-btn"
+            >
               {mobileMenuOpen ? "✕" : "☰"}
             </button>
           </div>
@@ -112,7 +162,21 @@ function Navbar() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div style={{ position: "fixed", top: "64px", left: 0, right: 0, background: "#0f0f1a", borderBottom: "1px solid #1a1a2e", padding: "20px", zIndex: 999, display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{
+          position: "fixed",
+          top: "56px",
+          left: 0,
+          right: 0,
+          background: "#0f0f1a",
+          borderBottom: "1px solid #1a1a2e",
+          padding: "16px 20px",
+          zIndex: 999,
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          maxHeight: "calc(100vh - 56px)",
+          overflowY: "auto"
+        }}>
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Dashboard</Link>
           <Link to="/subjects" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Subjects</Link>
           <Link to="/assignments" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignments</Link>
@@ -120,13 +184,37 @@ function Navbar() {
           <Link to="/announcements" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Announcements</Link>
           <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Class Directory</Link>
           
-          {/* Management tools - visible to admin, moderator, cr, lr, coordinator */}
           {canViewManagement() && (
             <>
               <Link to="/create-subject" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Manage Subjects</Link>
-              <Link to="/create-folder" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Manage Folders</Link>
+              <Link to="/manage-folders" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Manage Folders</Link>
             </>
           )}
+          <div style={{
+            borderTop: "1px solid #2d3748",
+            paddingTop: "10px",
+            marginTop: "4px"
+          }}>
+            <button
+              onClick={() => {
+                logout();
+                setMobileMenuOpen(false);
+              }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                fontWeight: "600",
+                cursor: "pointer",
+                fontSize: "14px"
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
       )}
 
@@ -134,7 +222,7 @@ function Navbar() {
         @media (max-width: 768px) { .desktop-nav { display: none !important; } .mobile-menu-btn { display: flex !important; } }
         @media (min-width: 769px) { .mobile-menu-btn { display: none !important; } }
         * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        a.active { color: #a78bfa !important; background: rgba(102, 126, 234, 0.1) !important; }
+        a.active { color: #a78bfa !important; background: rgba(102, 126, 234, 0.08) !important; border-color: rgba(102, 126, 234, 0.2) !important; }
       `}</style>
     </>
   );

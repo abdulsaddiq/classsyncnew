@@ -18,9 +18,7 @@ import {
     FaCalendarAlt,
     FaClock,
     FaNewspaper,
-    FaTasks,
-    FaInfoCircle,
-    FaChartBar
+    FaTasks
 } from "react-icons/fa";
 
 function Dashboard() {
@@ -32,18 +30,18 @@ function Dashboard() {
     const [activities, setActivities] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showPermissions, setShowPermissions] = useState(false);
 
-    const canManage = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
+    const isAdminTeam = ["admin", "moderator"].includes(user?.role);
+    const isAcademicTeam = ["admin", "moderator", "cr", "lr", "coordinator"].includes(user?.role);
 
     const getRoleDisplay = useCallback((role) => {
         const roleMap = {
-            admin: { label: "ADMIN", icon: "👑", color: "#f472b6", bg: "rgba(236, 72, 153, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements", "Manage Subjects", "Manage Folders", "Moderate Content", "User Management"] },
-            moderator: { label: "MODERATOR", icon: "🛡", color: "#c084fc", bg: "rgba(168, 85, 247, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements", "Manage Subjects", "Manage Folders", "Moderate Content"] },
-            cr: { label: "CR", icon: "🎓", color: "#60a5fa", bg: "rgba(59, 130, 246, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements", "Manage Subjects", "Manage Folders"] },
-            lr: { label: "LR", icon: "🌸", color: "#f9a8d4", bg: "rgba(244, 114, 182, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements", "Manage Subjects", "Manage Folders"] },
-            coordinator: { label: "COORDINATOR", icon: "📚", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements"] },
-            student: { label: "STUDENT", icon: "👤", color: "#34d399", bg: "rgba(16, 185, 129, 0.2)", permissions: ["Upload Notes", "Create Assignments", "Create Announcements", "Browse Subjects"] }
+            admin: { label: "ADMIN", icon: "👑", color: "#f472b6", bg: "rgba(236, 72, 153, 0.15)" },
+            moderator: { label: "MODERATOR", icon: "🛡", color: "#c084fc", bg: "rgba(168, 85, 247, 0.15)" },
+            cr: { label: "CR", icon: "🎓", color: "#60a5fa", bg: "rgba(59, 130, 246, 0.15)" },
+            lr: { label: "LR", icon: "🌸", color: "#f9a8d4", bg: "rgba(244, 114, 182, 0.15)" },
+            coordinator: { label: "COORDINATOR", icon: "📚", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.15)" },
+            student: { label: "STUDENT", icon: "👤", color: "#34d399", bg: "rgba(16, 185, 129, 0.15)" }
         };
         return roleMap[role] || roleMap.student;
     }, []);
@@ -85,6 +83,26 @@ function Dashboard() {
         if (daysLeft === 0) return "📅 Due Today";
         if (daysLeft <= 3) return `⚠️ ${daysLeft} days left`;
         return `⏳ ${daysLeft} days left`;
+    }, []);
+
+    const getRelativeTime = useCallback((dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return "Yesterday";
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short"
+        });
     }, []);
 
     useEffect(() => {
@@ -190,58 +208,44 @@ function Dashboard() {
                 return getDaysLeft(a.due_date) >= 0;
             })
             .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
-            .slice(0, 5);
+            .slice(0, 4);
     }, [assignments, getDaysLeft]);
 
-    // Latest announcements (3)
+    // Latest announcements (2)
     const latestAnnouncements = useMemo(() => {
         return [...announcements]
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3);
+            .slice(0, 2);
     }, [announcements]);
 
-    // Latest assignments (3)
+    // Latest assignments (2)
     const latestAssignments = useMemo(() => {
         return [...assignments]
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3);
+            .slice(0, 2);
     }, [assignments]);
 
-    // Recent activities (5)
+    // Recent activities (6)
     const recentActivities = useMemo(() => {
-        return activities.slice(0, 5);
+        return activities.slice(0, 6);
     }, [activities]);
 
-    // Subjects preview (4)
+    // Subjects preview (6)
     const subjectPreview = useMemo(() => {
-        return subjects.slice(0, 4);
+        return subjects.slice(0, 6);
     }, [subjects]);
 
-    // Today summary stats
-    const todaySummary = useMemo(() => {
-        const activeAssignments = assignments.filter(a => {
+    // Snapshot stats
+    const snapshotStats = {
+        classesToday: todayData.classes.length,
+        assignmentsDue: assignments.filter(a => {
             const days = getDaysLeft(a.due_date);
             return days !== null && days >= 0;
-        }).length;
-
-        const overdueAssignments = assignments.filter(a => {
-            const days = getDaysLeft(a.due_date);
-            return days !== null && days < 0;
-        }).length;
-
-        const totalSubjects = subjects.length;
-        const totalAnnouncements = announcements.length;
-        const totalFiles = stats?.files || 0;
-
-        return {
-            remainingClasses: todayData.remaining,
-            activeAssignments,
-            overdueAssignments,
-            totalSubjects,
-            totalAnnouncements,
-            totalFiles
-        };
-    }, [assignments, announcements, subjects, stats, todayData.remaining, getDaysLeft]);
+        }).length,
+        announcementsCount: announcements.length,
+        subjectsCount: subjects.length,
+        filesCount: stats?.files || 0
+    };
 
     if (loading) {
         return (
@@ -264,39 +268,35 @@ function Dashboard() {
     const roleInfo = getRoleDisplay(user?.role);
 
     const styles = {
-        sectionTitle: {
-            color: "#94a3b8",
-            fontSize: "11px",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            marginBottom: "12px",
-            borderBottom: "1px solid #2d3748",
-            paddingBottom: "8px"
+        container: {
+            backgroundColor: "#0a0e27",
+            minHeight: "100vh",
+            padding: "16px 20px"
+        },
+        content: {
+            maxWidth: "1200px",
+            margin: "0 auto"
         },
         card: {
             background: "#1a1f3a",
             borderRadius: "12px",
             border: "1px solid #2d3748",
-            padding: "18px",
+            padding: "16px",
             marginBottom: "16px"
         },
-        heading: {
+        cardTitle: {
             color: "#ffffff",
-            fontSize: "18px",
+            fontSize: "16px",
             fontWeight: "500",
-            margin: 0
-        },
-        subheading: {
-            color: "#94a3b8",
-            fontSize: "12px",
-            margin: "2px 0 0 0"
+            margin: "0 0 12px 0",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
         },
         link: {
             color: "#667eea",
             textDecoration: "none",
             fontSize: "13px",
-            transition: "gap 0.15s",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -304,570 +304,281 @@ function Dashboard() {
             paddingTop: "12px",
             marginTop: "12px",
             borderTop: "1px solid #2d3748"
-        },
-        clickableItem: {
-            padding: "10px 0",
-            borderBottom: "1px solid #2d3748",
-            cursor: "pointer",
-            transition: "background 0.15s",
-            borderRadius: "6px",
-            padding: "8px 10px",
-            margin: "0 -10px"
         }
     };
 
     return (
-        <div style={{
-            backgroundColor: "#0a0e27",
-            minHeight: "100vh"
-        }}>
+        <div style={styles.container}>
             <Navbar />
 
-            <div style={{
-                padding: "20px",
-                paddingTop: "20px",
-                maxWidth: "1400px",
-                margin: "0 auto",
-                width: "100%",
-                boxSizing: "border-box"
-            }}>
-                {/* ===== OVERVIEW SECTION ===== */}
-                <div style={styles.sectionTitle}>📊 Overview</div>
-
-                {/* Welcome Card */}
+            <div style={styles.content}>
+                {/* ===== 1. HERO / OVERVIEW ===== */}
                 <div style={{
-                    ...styles.card,
                     background: "#1a1f3a",
-                    border: "1px solid #2d3748"
+                    borderRadius: "12px",
+                    border: "1px solid #2d3748",
+                    padding: "16px 18px",
+                    marginBottom: "16px"
                 }}>
                     <div style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         flexWrap: "wrap",
-                        gap: "15px"
+                        gap: "12px"
                     }}>
-                        <div style={{ flex: 1 }}>
+                        <div>
+                            <div style={{ color: "#667eea", fontSize: "13px", fontWeight: "600", letterSpacing: "0.5px" }}>
+                                CLASS-SYNC STUDENT PORTAL
+                            </div>
                             <h1 style={{
-                                margin: "0 0 6px 0",
-                                fontSize: "clamp(20px, 6vw, 28px)",
+                                margin: "4px 0 0 0",
+                                fontSize: "clamp(20px, 4vw, 26px)",
                                 color: "#ffffff",
-                                wordBreak: "break-word",
                                 fontWeight: "500"
                             }}>
                                 Welcome back, {user?.name?.split(' ')[0]}! 👋
                             </h1>
                             <div style={{
                                 display: "flex",
-                                gap: "10px",
+                                gap: "8px",
                                 flexWrap: "wrap",
-                                alignItems: "center"
+                                alignItems: "center",
+                                marginTop: "6px"
                             }}>
                                 <span style={{
-                                    padding: "4px 12px",
-                                    borderRadius: "20px",
-                                    fontSize: "12px",
+                                    padding: "2px 10px",
+                                    borderRadius: "14px",
+                                    fontSize: "11px",
                                     color: "#ffffff",
-                                    backgroundColor: "rgba(255,255,255,0.1)"
+                                    background: "rgba(255,255,255,0.08)"
                                 }}>
-                                    Roll No: {user?.roll_no}
+                                    Roll: {user?.roll_no}
                                 </span>
                                 <span style={{
-                                    padding: "4px 12px",
-                                    borderRadius: "20px",
-                                    fontSize: "12px",
+                                    padding: "2px 10px",
+                                    borderRadius: "14px",
+                                    fontSize: "11px",
                                     fontWeight: "600",
                                     backgroundColor: roleInfo.bg,
                                     color: roleInfo.color
                                 }}>
                                     {roleInfo.icon} {roleInfo.label}
                                 </span>
-                                <span style={{
-                                    padding: "2px 8px",
-                                    borderRadius: "12px",
-                                    fontSize: "10px",
-                                    color: "#64748b",
-                                    cursor: "pointer",
-                                    background: "rgba(100, 116, 139, 0.1)"
-                                }}
-                                onClick={() => setShowPermissions(!showPermissions)}
-                                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(100, 116, 139, 0.2)"}
-                                onMouseLeave={(e) => e.currentTarget.style.background = "rgba(100, 116, 139, 0.1)"}>
-                                    {showPermissions ? "Hide Permissions" : `${roleInfo.permissions.length} Permissions`}
-                                </span>
                             </div>
-                            {showPermissions && (
-                                <div style={{
-                                    marginTop: "12px",
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: "8px"
-                                }}>
-                                    {roleInfo.permissions.map((perm, idx) => (
-                                        <span key={idx} style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "4px",
-                                            background: "rgba(16, 185, 129, 0.1)",
-                                            color: "#34d399",
-                                            padding: "2px 10px",
-                                            borderRadius: "12px",
-                                            fontSize: "11px",
-                                            fontWeight: "500"
-                                        }}>
-                                            ✓ {perm}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                         <div style={{
-                            fontSize: "clamp(36px, 10vw, 44px)"
+                            display: "flex",
+                            gap: "16px",
+                            flexWrap: "wrap",
+                            background: "#0f172a",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748"
                         }}>
-                            🎓
+                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                📚 <span style={{ color: "#ffffff", fontWeight: "600" }}>{snapshotStats.classesToday}</span> Today
+                            </span>
+                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                📝 <span style={{ color: "#ffffff", fontWeight: "600" }}>{snapshotStats.assignmentsDue}</span> Due
+                            </span>
+                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                📢 <span style={{ color: "#ffffff", fontWeight: "600" }}>{snapshotStats.announcementsCount}</span> New
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                {/* Today Summary Card */}
-                <div style={{
-                    ...styles.card,
-                    padding: "14px"
-                }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "10px"
-                    }}>
-                        <FaInfoCircle style={{ color: "#a78bfa", fontSize: "16px" }} />
-                        <h2 style={{ ...styles.heading, fontSize: "15px" }}>📌 Today Summary</h2>
-                    </div>
+                {/* ===== 2. QUICK ACTIONS ===== */}
+                <div style={styles.card}>
+                    <h2 style={styles.cardTitle}>⚡ Quick Actions</h2>
                     <div style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
                         gap: "8px"
                     }}>
-                        {todaySummary.remainingClasses > 0 && (
-                            <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                                📚 Classes remaining: <span style={{ color: "#ffffff", fontWeight: "600" }}>{todaySummary.remainingClasses}</span>
-                            </span>
-                        )}
-                        {todaySummary.activeAssignments > 0 && (
-                            <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                                📝 Assignments due: <span style={{ color: "#ffffff", fontWeight: "600" }}>{todaySummary.activeAssignments}</span>
-                            </span>
-                        )}
-                        {todaySummary.overdueAssignments > 0 && (
-                            <span style={{ color: "#ef4444", fontSize: "13px" }}>
-                                ❌ Overdue: <span style={{ fontWeight: "600" }}>{todaySummary.overdueAssignments}</span>
-                            </span>
-                        )}
-                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                            📢 Announcements: <span style={{ color: "#ffffff", fontWeight: "600" }}>{todaySummary.totalAnnouncements}</span>
-                        </span>
-                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                            📄 Total Files: <span style={{ color: "#ffffff", fontWeight: "600" }}>{todaySummary.totalFiles}</span>
-                        </span>
-                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>
-                            📚 Subjects: <span style={{ color: "#ffffff", fontWeight: "600" }}>{todaySummary.totalSubjects}</span>
-                        </span>
+                        <Link to="/upload-file" style={{
+                            textDecoration: "none",
+                            background: "#0f172a",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#10b981"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaUpload style={{ color: "#10b981", fontSize: "14px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Upload Notes</span>
+                        </Link>
+
+                        <Link to="/subjects" style={{
+                            textDecoration: "none",
+                            background: "#0f172a",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaBook style={{ color: "#667eea", fontSize: "14px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Subjects</span>
+                        </Link>
+
+                        <Link to="/assignments" style={{
+                            textDecoration: "none",
+                            background: "#0f172a",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaTasks style={{ color: "#a78bfa", fontSize: "14px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Assignments</span>
+                        </Link>
+
+                        <Link to="/announcements" style={{
+                            textDecoration: "none",
+                            background: "#0f172a",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaBullhorn style={{ color: "#f59e0b", fontSize: "14px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Announcements</span>
+                        </Link>
+
+                        <Link to="/timetable" style={{
+                            textDecoration: "none",
+                            background: "#0f172a",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #2d3748",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "border-color 0.15s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                            <FaCalendarAlt style={{ color: "#a78bfa", fontSize: "14px" }} />
+                            <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Timetable</span>
+                        </Link>
                     </div>
                 </div>
 
-                {/* ===== ACTIONS SECTION ===== */}
-                <div style={styles.sectionTitle}>⚡ Quick Actions</div>
-
+                {/* ===== 3. TODAY SUMMARY MINI STATS ===== */}
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                    gap: "10px",
+                    gap: "12px",
                     marginBottom: "16px"
                 }}>
-                    <Link to="/upload-file" style={{
-                        textDecoration: "none",
+                    <div style={{
                         background: "#1a1f3a",
-                        padding: "12px",
                         borderRadius: "10px",
                         border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#10b981"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaUpload style={{ color: "#10b981", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Upload Notes</span>
-                    </Link>
-
-                    <Link to="/create-announcement" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
                         padding: "12px",
-                        borderRadius: "10px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaPlus style={{ color: "#f59e0b", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Create Announcement</span>
-                    </Link>
-
-                    <Link to="/create-assignment" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "12px",
-                        borderRadius: "10px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaPlus style={{ color: "#a78bfa", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Create Assignment</span>
-                    </Link>
-
-                    <Link to="/announcements" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "12px",
-                        borderRadius: "10px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaBullhorn style={{ color: "#f59e0b", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Announcements</span>
-                    </Link>
-
-                    <Link to="/assignments" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "12px",
-                        borderRadius: "10px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        transition: "border-color 0.15s"
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaTasks style={{ color: "#a78bfa", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Assignments</span>
-                    </Link>
-
-                    <Link to="/subjects" style={{
-                        textDecoration: "none",
-                        background: "#1a1f3a",
-                        padding: "12px",
-                        borderRadius: "10px",
-                        border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
+                        textAlign: "center",
                         transition: "border-color 0.15s"
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
                     onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaBook style={{ color: "#667eea", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Subjects</span>
-                    </Link>
+                        <FaBook style={{ color: "#667eea", fontSize: "18px", marginBottom: "2px" }} />
+                        <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{snapshotStats.subjectsCount}</p>
+                        <p style={{ color: "#94a3b8", fontSize: "11px", margin: 0 }}>Subjects</p>
+                    </div>
 
-                    <Link to="/timetable" style={{
-                        textDecoration: "none",
+                    <div style={{
                         background: "#1a1f3a",
-                        padding: "12px",
                         borderRadius: "10px",
                         border: "1px solid #2d3748",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
+                        padding: "12px",
+                        textAlign: "center",
                         transition: "border-color 0.15s"
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
                     onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                        <FaCalendarAlt style={{ color: "#a78bfa", fontSize: "16px" }} />
-                        <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Timetable</span>
-                    </Link>
-                </div>
-
-                {/* ===== ACADEMICS SECTION ===== */}
-                <div style={styles.sectionTitle}>📚 Academics</div>
-
-                {/* Today's Classes + Upcoming Deadlines */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                    gap: "16px",
-                    marginBottom: "16px"
-                }}>
-                    {/* Today's Classes */}
-                    <div style={styles.card}>
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: "8px",
-                            marginBottom: "12px"
-                        }}>
-                            <div>
-                                <h2 style={styles.heading}>📅 Today's Classes</h2>
-                                <p style={styles.subheading}>
-                                    {todayData.today} • {todayData.classes.length} Classes
-                                </p>
-                            </div>
-                        </div>
-
-                        {todayData.classes.length === 0 ? (
-                            <div style={{
-                                textAlign: "center",
-                                padding: "20px",
-                                color: "#94a3b8",
-                                fontSize: "13px"
-                            }}>
-                                📅 No classes today
-                            </div>
-                        ) : (
-                            <div>
-                                {todayData.classes.slice(0, 3).map((entry) => {
-                                    const lab = isLab(entry.subject_name);
-                                    const isActive = todayData.activeClass?.id === entry.id;
-                                    const isNext = todayData.nextClass?.id === entry.id && !isActive;
-
-                                    return (
-                                        <div
-                                            key={entry.id}
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center",
-                                                padding: "8px 0",
-                                                borderBottom: "1px solid #2d3748",
-                                                flexWrap: "wrap",
-                                                gap: "4px",
-                                                ...(isActive ? {
-                                                    background: "rgba(16, 185, 129, 0.05)",
-                                                    borderRadius: "6px",
-                                                    padding: "8px 10px",
-                                                    margin: "0 -10px"
-                                                } : {}),
-                                                ...(isNext ? {
-                                                    background: "rgba(96, 165, 250, 0.05)",
-                                                    borderRadius: "6px",
-                                                    padding: "8px 10px",
-                                                    margin: "0 -10px"
-                                                } : {})
-                                            }}
-                                        >
-                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                <span style={{ fontSize: "16px" }}>
-                                                    {lab ? "🧪" : "📚"}
-                                                </span>
-                                                <div>
-                                                    <div style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "6px",
-                                                        flexWrap: "wrap"
-                                                    }}>
-                                                        <span style={{
-                                                            color: "#ffffff",
-                                                            fontSize: "13px",
-                                                            fontWeight: "500"
-                                                        }}>
-                                                            {entry.subject_name}
-                                                        </span>
-                                                        {isActive && (
-                                                            <span style={{
-                                                                background: "rgba(16, 185, 129, 0.15)",
-                                                                color: "#34d399",
-                                                                fontSize: "9px",
-                                                                fontWeight: "600",
-                                                                padding: "2px 6px",
-                                                                borderRadius: "10px"
-                                                            }}>
-                                                                NOW
-                                                            </span>
-                                                        )}
-                                                        {isNext && !isActive && (
-                                                            <span style={{
-                                                                background: "rgba(96, 165, 250, 0.15)",
-                                                                color: "#60a5fa",
-                                                                fontSize: "9px",
-                                                                fontWeight: "600",
-                                                                padding: "2px 6px",
-                                                                borderRadius: "10px"
-                                                            }}>
-                                                                NEXT
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {entry.room && lab && (
-                                                        <div style={{
-                                                            color: "#94a3b8",
-                                                            fontSize: "11px"
-                                                        }}>
-                                                            🏫 {entry.room}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div style={{
-                                                color: "#94a3b8",
-                                                fontSize: "12px",
-                                                whiteSpace: "nowrap"
-                                            }}>
-                                                {entry.start_time} - {entry.end_time}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {todayData.classes.length > 3 && (
-                                    <Link
-                                        to="/timetable"
-                                        style={{
-                                            display: "block",
-                                            textAlign: "center",
-                                            color: "#667eea",
-                                            textDecoration: "none",
-                                            fontSize: "12px",
-                                            marginTop: "10px"
-                                        }}
-                                    >
-                                        +{todayData.classes.length - 3} more classes
-                                    </Link>
-                                )}
-                            </div>
-                        )}
-
-                        <Link
-                            to="/timetable"
-                            style={styles.link}
-                            onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                            onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                        >
-                            View Full Timetable <FaArrowRight style={{ fontSize: "12px" }} />
-                        </Link>
+                        <FaTasks style={{ color: "#a78bfa", fontSize: "18px", marginBottom: "2px" }} />
+                        <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{snapshotStats.assignmentsDue}</p>
+                        <p style={{ color: "#94a3b8", fontSize: "11px", margin: 0 }}>Due</p>
                     </div>
 
-                    {/* Upcoming Deadlines */}
-                    <div style={styles.card}>
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "12px"
-                        }}>
-                            <FaClock style={{ color: "#f59e0b", fontSize: "18px" }} />
-                            <h2 style={styles.heading}>⏰ Upcoming Deadlines</h2>
-                        </div>
+                    <div style={{
+                        background: "#1a1f3a",
+                        borderRadius: "10px",
+                        border: "1px solid #2d3748",
+                        padding: "12px",
+                        textAlign: "center",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaBullhorn style={{ color: "#f59e0b", fontSize: "18px", marginBottom: "2px" }} />
+                        <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{snapshotStats.announcementsCount}</p>
+                        <p style={{ color: "#94a3b8", fontSize: "11px", margin: 0 }}>Announcements</p>
+                    </div>
 
-                        {upcomingAssignments.length === 0 ? (
-                            <div style={{
-                                textAlign: "center",
-                                padding: "20px",
-                                color: "#94a3b8",
-                                fontSize: "13px"
-                            }}>
-                                🎉 All caught up!
-                            </div>
-                        ) : (
-                            <div>
-                                {upcomingAssignments.slice(0, 3).map((assignment) => {
-                                    const daysLeft = getDaysLeft(assignment.due_date);
-                                    const statusColor = getStatusColor(daysLeft);
-                                    
-                                    return (
-                                        <div
-                                            key={assignment.id}
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center",
-                                                padding: "8px 0",
-                                                borderBottom: "1px solid #2d3748",
-                                                flexWrap: "wrap",
-                                                gap: "4px"
-                                            }}
-                                        >
-                                            <div>
-                                                <div style={{
-                                                    color: "#ffffff",
-                                                    fontSize: "13px",
-                                                    fontWeight: "500"
-                                                }}>
-                                                    {assignment.title}
-                                                </div>
-                                                <div style={{
-                                                    color: "#94a3b8",
-                                                    fontSize: "11px"
-                                                }}>
-                                                    📚 {assignment.subject_name || "Unknown Subject"}
-                                                </div>
-                                            </div>
-                                            <div style={{
-                                                color: statusColor,
-                                                fontSize: "12px",
-                                                fontWeight: "500"
-                                            }}>
-                                                {getStatusText(daysLeft)}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {upcomingAssignments.length > 3 && (
-                                    <div style={{
-                                        textAlign: "center",
-                                        color: "#94a3b8",
-                                        fontSize: "12px",
-                                        marginTop: "8px"
-                                    }}>
-                                        +{upcomingAssignments.length - 3} more deadlines
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                    <div style={{
+                        background: "#1a1f3a",
+                        borderRadius: "10px",
+                        border: "1px solid #2d3748",
+                        padding: "12px",
+                        textAlign: "center",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#ed8936"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaFile style={{ color: "#ed8936", fontSize: "18px", marginBottom: "2px" }} />
+                        <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{snapshotStats.filesCount}</p>
+                        <p style={{ color: "#94a3b8", fontSize: "11px", margin: 0 }}>Files</p>
+                    </div>
 
-                        <Link
-                            to="/assignments"
-                            style={styles.link}
-                            onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                            onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                        >
-                            View All Assignments <FaArrowRight style={{ fontSize: "12px" }} />
-                        </Link>
+                    <div style={{
+                        background: "#1a1f3a",
+                        borderRadius: "10px",
+                        border: "1px solid #2d3748",
+                        padding: "12px",
+                        textAlign: "center",
+                        transition: "border-color 0.15s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "#34d399"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                        <FaCalendarAlt style={{ color: "#34d399", fontSize: "18px", marginBottom: "2px" }} />
+                        <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{snapshotStats.classesToday}</p>
+                        <p style={{ color: "#94a3b8", fontSize: "11px", margin: 0 }}>Today</p>
                     </div>
                 </div>
 
-                {/* Browse Subjects Preview */}
+                {/* ===== 4. BROWSE SUBJECTS ===== */}
                 <div style={styles.card}>
                     <div style={{
                         display: "flex",
+                        justifyContent: "space-between",
                         alignItems: "center",
+                        flexWrap: "wrap",
                         gap: "8px",
                         marginBottom: "12px"
                     }}>
-                        <FaBook style={{ color: "#667eea", fontSize: "18px" }} />
-                        <h2 style={styles.heading}>📚 Browse Subjects</h2>
-                        <span style={{
-                            color: "#94a3b8",
-                            fontSize: "12px",
-                            marginLeft: "auto"
-                        }}>
+                        <h2 style={{ ...styles.cardTitle, marginBottom: 0 }}>📚 Browse Subjects</h2>
+                        <span style={{ color: "#94a3b8", fontSize: "12px" }}>
                             Total: {subjects.length}
                         </span>
                     </div>
@@ -879,12 +590,16 @@ function Dashboard() {
                             color: "#94a3b8",
                             fontSize: "13px"
                         }}>
-                            No subjects available
+                            <div style={{ fontSize: "36px", marginBottom: "8px" }}>📚</div>
+                            <div>No subjects yet</div>
+                            <div style={{ fontSize: "12px", marginTop: "4px", color: "#64748b" }}>
+                                Create your first subject to get started
+                            </div>
                         </div>
                     ) : (
                         <div style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
                             gap: "10px"
                         }}>
                             {subjectPreview.map((subject) => (
@@ -897,19 +612,19 @@ function Dashboard() {
                                         padding: "12px",
                                         borderRadius: "8px",
                                         border: "1px solid #2d3748",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
+                                        textAlign: "center",
                                         transition: "border-color 0.15s"
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.borderColor = "#667eea"}
                                     onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                                 >
-                                    <span style={{ fontSize: "20px" }}>📚</span>
+                                    <span style={{ fontSize: "24px", display: "block" }}>📚</span>
                                     <span style={{
                                         color: "#e2e8f0",
                                         fontSize: "13px",
-                                        fontWeight: "500"
+                                        fontWeight: "500",
+                                        display: "block",
+                                        marginTop: "4px"
                                     }}>
                                         {subject.name}
                                     </span>
@@ -918,38 +633,167 @@ function Dashboard() {
                         </div>
                     )}
 
-                    <Link
-                        to="/subjects"
-                        style={styles.link}
-                        onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                        onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                    >
+                    <Link to="/subjects" style={styles.link}>
                         Browse All Subjects <FaArrowRight style={{ fontSize: "12px" }} />
                     </Link>
                 </div>
 
-                {/* ===== COMMUNITY SECTION ===== */}
-                <div style={styles.sectionTitle}>💬 Community</div>
-
-                {/* Recent Announcements + Latest Assignments */}
+                {/* ===== 5. ACADEMICS (CLASSES + DEADLINES) ===== */}
                 <div style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "16px"
+                }}>
+                    {/* Today's Classes */}
+                    <div style={styles.card}>
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                            marginBottom: "8px"
+                        }}>
+                            <h2 style={styles.cardTitle}>📅 Today's Classes</h2>
+                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                {todayData.classes.length} Classes • {todayData.remaining} Remaining
+                            </span>
+                        </div>
+
+                        {todayData.classes.length === 0 ? (
+                            <div style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", padding: "16px 0" }}>
+                                <div style={{ fontSize: "30px", marginBottom: "8px" }}>🎉</div>
+                                No classes today
+                            </div>
+                        ) : (
+                            <div>
+                                {todayData.classes.slice(0, 3).map((entry, idx) => {
+                                    const lab = isLab(entry.subject_name);
+                                    const isActive = todayData.activeClass?.id === entry.id;
+                                    const isNext = todayData.nextClass?.id === entry.id && !isActive;
+                                    const isLast = idx === todayData.classes.slice(0, 3).length - 1;
+
+                                    return (
+                                        <div
+                                            key={entry.id}
+                                            style={{
+                                                display: "flex",
+                                                justifyContent: "space-between",
+                                                alignItems: "center",
+                                                padding: "7px 0",
+                                                borderBottom: isLast ? "none" : "1px solid #2d3748",
+                                                flexWrap: "wrap",
+                                                gap: "4px",
+                                                ...(isActive ? {
+                                                    background: "rgba(16, 185, 129, 0.06)",
+                                                    borderRadius: "6px",
+                                                    padding: "7px 10px",
+                                                    margin: "0 -8px"
+                                                } : {}),
+                                                ...(isNext ? {
+                                                    background: "rgba(96, 165, 250, 0.06)",
+                                                    borderRadius: "6px",
+                                                    padding: "7px 10px",
+                                                    margin: "0 -8px"
+                                                } : {})
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <span style={{ fontSize: "15px" }}>{lab ? "🧪" : "📚"}</span>
+                                                <span style={{ color: "#ffffff", fontSize: "13px", fontWeight: "500" }}>{entry.subject_name}</span>
+                                                {isActive && (
+                                                    <span style={{
+                                                        fontSize: "9px",
+                                                        fontWeight: "600",
+                                                        padding: "1px 6px",
+                                                        borderRadius: "10px",
+                                                        background: "rgba(16,185,129,0.15)",
+                                                        color: "#34d399"
+                                                    }}>NOW</span>
+                                                )}
+                                                {isNext && !isActive && (
+                                                    <span style={{
+                                                        fontSize: "9px",
+                                                        fontWeight: "600",
+                                                        padding: "1px 6px",
+                                                        borderRadius: "10px",
+                                                        background: "rgba(96,165,250,0.15)",
+                                                        color: "#60a5fa"
+                                                    }}>NEXT</span>
+                                                )}
+                                            </div>
+                                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>{entry.start_time} - {entry.end_time}</span>
+                                        </div>
+                                    );
+                                })}
+                                {todayData.classes.length > 3 && (
+                                    <Link to="/timetable" style={{ color: "#667eea", textDecoration: "none", fontSize: "12px", display: "block", textAlign: "center", marginTop: "8px" }}>
+                                        +{todayData.classes.length - 3} more classes
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+
+                        <Link to="/timetable" style={styles.link}>
+                            View Full Timetable <FaArrowRight style={{ fontSize: "12px" }} />
+                        </Link>
+                    </div>
+
+                    {/* Upcoming Deadlines */}
+                    <div style={styles.card}>
+                        <h2 style={styles.cardTitle}>⏰ Upcoming Deadlines</h2>
+                        {upcomingAssignments.length === 0 ? (
+                            <div style={{ color: "#94a3b8", fontSize: "13px", textAlign: "center", padding: "16px 0" }}>
+                                <div style={{ fontSize: "30px", marginBottom: "8px" }}>🎉</div>
+                                All caught up!
+                            </div>
+                        ) : (
+                            upcomingAssignments.map((assignment, idx) => {
+                                const daysLeft = getDaysLeft(assignment.due_date);
+                                const statusColor = getStatusColor(daysLeft);
+                                const isLast = idx === upcomingAssignments.length - 1;
+
+                                return (
+                                    <div
+                                        key={assignment.id}
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "7px 0",
+                                            borderBottom: isLast ? "none" : "1px solid #2d3748",
+                                            flexWrap: "wrap",
+                                            gap: "4px"
+                                        }}
+                                    >
+                                        <div>
+                                            <div style={{ color: "#ffffff", fontSize: "13px", fontWeight: "500" }}>{assignment.title}</div>
+                                            <div style={{ color: "#94a3b8", fontSize: "11px" }}>📚 {assignment.subject_name || "Unknown"}</div>
+                                        </div>
+                                        <div style={{ color: statusColor, fontSize: "12px", fontWeight: "500" }}>
+                                            {getStatusText(daysLeft)}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                        <Link to="/assignments" style={styles.link}>
+                            View All Assignments <FaArrowRight style={{ fontSize: "12px" }} />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* ===== 6. COMMUNITY (ANNOUNCEMENTS + ASSIGNMENTS) ===== */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
                     gap: "16px",
                     marginBottom: "16px"
                 }}>
                     {/* Recent Announcements */}
                     <div style={styles.card}>
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "12px"
-                        }}>
-                            <FaNewspaper style={{ color: "#f59e0b", fontSize: "18px" }} />
-                            <h2 style={styles.heading}>📢 Recent Announcements</h2>
-                        </div>
-
+                        <h2 style={styles.cardTitle}>📢 Recent Announcements</h2>
                         {latestAnnouncements.length === 0 ? (
                             <div style={{
                                 textAlign: "center",
@@ -957,75 +801,52 @@ function Dashboard() {
                                 color: "#94a3b8",
                                 fontSize: "13px"
                             }}>
+                                <div style={{ fontSize: "30px", marginBottom: "8px" }}>📢</div>
                                 No announcements yet
+                                <div style={{ fontSize: "12px", marginTop: "4px", color: "#64748b" }}>Stay tuned</div>
                             </div>
                         ) : (
-                            <div>
-                                {latestAnnouncements.map((announcement) => (
-                                    <Link
+                            latestAnnouncements.map((announcement, idx) => {
+                                const isLast = idx === latestAnnouncements.length - 1;
+                                const relativeTime = getRelativeTime(announcement.created_at);
+                                return (
+                                    <div
                                         key={announcement.id}
-                                        to="/announcements"
                                         style={{
-                                            ...styles.clickableItem,
-                                            display: "block",
-                                            textDecoration: "none"
+                                            padding: "8px 0",
+                                            borderBottom: isLast ? "none" : "1px solid #2d3748"
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(102, 126, 234, 0.05)"}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                                     >
+                                        <div style={{ color: "#ffffff", fontSize: "14px", fontWeight: "500" }}>{announcement.title}</div>
                                         <div style={{
                                             display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center"
+                                            gap: "12px",
+                                            flexWrap: "wrap",
+                                            alignItems: "center",
+                                            marginTop: "2px"
                                         }}>
-                                            <div style={{
-                                                color: "#ffffff",
-                                                fontSize: "14px",
-                                                fontWeight: "500"
-                                            }}>
-                                                {announcement.title}
-                                            </div>
-                                            <FaArrowRight style={{ color: "#667eea", fontSize: "12px" }} />
-                                        </div>
-                                        <div style={{
-                                            color: "#94a3b8",
-                                            fontSize: "12px",
-                                            marginTop: "4px"
-                                        }}>
-                                            👤 {announcement.created_by || "Admin"}
-                                            {announcement.created_by_role && (
-                                                <span style={{ marginLeft: "4px" }}>
-                                                    ({announcement.created_by_role.toUpperCase()})
-                                                </span>
+                                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                                👤 {announcement.created_by || "Admin"}
+                                                {announcement.created_by_role && (
+                                                    <span style={{ marginLeft: "4px" }}>({announcement.created_by_role.toUpperCase()})</span>
+                                                )}
+                                            </span>
+                                            {relativeTime && (
+                                                <span style={{ color: "#64748b", fontSize: "11px" }}>🕒 {relativeTime}</span>
                                             )}
                                         </div>
-                                    </Link>
-                                ))}
-                            </div>
+                                    </div>
+                                );
+                            })
                         )}
-
-                        <Link
-                            to="/announcements"
-                            style={styles.link}
-                            onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                            onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                        >
+                        <Link to="/announcements" style={styles.link}>
                             View All Announcements <FaArrowRight style={{ fontSize: "12px" }} />
                         </Link>
                     </div>
 
                     {/* Latest Assignments */}
                     <div style={styles.card}>
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "12px"
-                        }}>
-                            <FaTasks style={{ color: "#a78bfa", fontSize: "18px" }} />
-                            <h2 style={styles.heading}>📝 Latest Assignments</h2>
-                        </div>
-
+                        <h2 style={styles.cardTitle}>📝 Latest Assignments</h2>
                         {latestAssignments.length === 0 ? (
                             <div style={{
                                 textAlign: "center",
@@ -1033,82 +854,57 @@ function Dashboard() {
                                 color: "#94a3b8",
                                 fontSize: "13px"
                             }}>
+                                <div style={{ fontSize: "30px", marginBottom: "8px" }}>📝</div>
                                 No assignments yet
+                                <div style={{ fontSize: "12px", marginTop: "4px", color: "#64748b" }}>Check back later</div>
                             </div>
                         ) : (
-                            <div>
-                                {latestAssignments.map((assignment) => (
-                                    <Link
+                            latestAssignments.map((assignment, idx) => {
+                                const isLast = idx === latestAssignments.length - 1;
+                                const relativeTime = getRelativeTime(assignment.created_at);
+                                return (
+                                    <div
                                         key={assignment.id}
-                                        to="/assignments"
                                         style={{
-                                            ...styles.clickableItem,
-                                            display: "block",
-                                            textDecoration: "none"
+                                            padding: "8px 0",
+                                            borderBottom: isLast ? "none" : "1px solid #2d3748"
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(102, 126, 234, 0.05)"}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                                     >
+                                        <div style={{ color: "#ffffff", fontSize: "14px", fontWeight: "500" }}>{assignment.title}</div>
                                         <div style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center"
-                                        }}>
-                                            <div style={{
-                                                color: "#ffffff",
-                                                fontSize: "14px",
-                                                fontWeight: "500"
-                                            }}>
-                                                {assignment.title}
-                                            </div>
-                                            <FaArrowRight style={{ color: "#667eea", fontSize: "12px" }} />
-                                        </div>
-                                        <div style={{
-                                            color: "#94a3b8",
-                                            fontSize: "12px",
-                                            marginTop: "4px",
                                             display: "flex",
                                             gap: "12px",
-                                            flexWrap: "wrap"
+                                            flexWrap: "wrap",
+                                            alignItems: "center",
+                                            marginTop: "2px"
                                         }}>
-                                            <span>📚 {assignment.subject_name || "Unknown Subject"}</span>
-                                            <span>👤 {assignment.created_by || "Admin"}</span>
-                                            {assignment.due_date && (
-                                                <span>📅 {new Date(assignment.due_date).toLocaleDateString()}</span>
+                                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                                📚 {assignment.subject_name || "Unknown"}
+                                            </span>
+                                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>
+                                                👤 {assignment.created_by || "Admin"}
+                                            </span>
+                                            {relativeTime && (
+                                                <span style={{ color: "#64748b", fontSize: "11px" }}>🕒 {relativeTime}</span>
                                             )}
                                         </div>
-                                    </Link>
-                                ))}
-                            </div>
+                                    </div>
+                                );
+                            })
                         )}
-
-                        <Link
-                            to="/assignments"
-                            style={styles.link}
-                            onMouseEnter={(e) => e.currentTarget.style.gap = "10px"}
-                            onMouseLeave={(e) => e.currentTarget.style.gap = "6px"}
-                        >
+                        <Link to="/assignments" style={styles.link}>
                             View All Assignments <FaArrowRight style={{ fontSize: "12px" }} />
                         </Link>
                     </div>
                 </div>
 
-                {/* Recent Activity */}
+                {/* ===== 7. RECENT ACTIVITY ===== */}
                 <div style={styles.card}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "12px"
-                    }}>
-                        <FaFire style={{ color: "#f97316", fontSize: "18px" }} />
-                        <h2 style={styles.heading}>🔥 Recent Activity</h2>
-                    </div>
-
+                    <h2 style={styles.cardTitle}>🔥 Recent Activity</h2>
                     {recentActivities.length === 0 ? (
                         <div style={{
                             textAlign: "center",
-                            padding: "20px",
+                            padding: "16px",
                             color: "#94a3b8",
                             fontSize: "13px"
                         }}>
@@ -1127,7 +923,7 @@ function Dashboard() {
                                         display: "flex",
                                         alignItems: "flex-start",
                                         gap: "10px",
-                                        padding: "8px 0",
+                                        padding: "6px 0",
                                         borderBottom: "1px solid #2d3748"
                                     }}
                                 >
@@ -1136,7 +932,7 @@ function Dashboard() {
                                         height: "6px",
                                         borderRadius: "50%",
                                         backgroundColor: "#f97316",
-                                        marginTop: "6px",
+                                        marginTop: "7px",
                                         flexShrink: 0
                                     }}></div>
                                     <p style={{
@@ -1146,6 +942,11 @@ function Dashboard() {
                                         lineHeight: "1.5"
                                     }}>
                                         {activity.message}
+                                        {activity.created_at && (
+                                            <span style={{ color: "#64748b", fontSize: "11px", marginLeft: "8px" }}>
+                                                • {getRelativeTime(activity.created_at)}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             ))}
@@ -1153,160 +954,171 @@ function Dashboard() {
                     )}
                 </div>
 
-                {/* ===== STATISTICS SECTION ===== */}
+                {/* ===== 8. STATISTICS ===== */}
                 {stats && (
-                    <>
-                        <div style={styles.sectionTitle}>📊 Statistics</div>
+                    <div style={{
+                        marginBottom: "16px"
+                    }}>
+                        <h2 style={{
+                            color: "#94a3b8",
+                            fontSize: "11px",
+                            fontWeight: "600",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            marginBottom: "12px",
+                            borderBottom: "1px solid #2d3748",
+                            paddingBottom: "8px"
+                        }}>
+                            📊 Platform Statistics
+                        </h2>
                         <div style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-                            gap: "10px",
-                            marginBottom: "16px"
+                            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                            gap: "10px"
                         }}>
                             {[
-                                { label: "Subjects", value: stats.subjects, icon: FaBook, color: "#667eea" },
-                                { label: "Folders", value: stats.folders, icon: FaFolder, color: "#48bb78" },
-                                { label: "Files", value: stats.files, icon: FaFile, color: "#ed8936" },
-                                { label: "Users", value: stats.users, icon: FaUsers, color: "#f687b3" },
-                                { label: "Announcements", value: stats.announcements, icon: FaBullhorn, color: "#4299e1" }
-                            ].map((stat, index) => (
+                                { label: "Subjects", value: stats.subjects, color: "#667eea" },
+                                { label: "Folders", value: stats.folders, color: "#48bb78" },
+                                { label: "Files", value: stats.files, color: "#ed8936" },
+                                { label: "Users", value: stats.users, color: "#f687b3" },
+                                { label: "Announcements", value: stats.announcements, color: "#4299e1" }
+                            ].map((stat, idx) => (
                                 <div
-                                    key={index}
+                                    key={idx}
                                     style={{
-                                        ...styles.card,
-                                        marginBottom: 0,
-                                        padding: "12px"
+                                        background: "#1a1f3a",
+                                        borderRadius: "10px",
+                                        border: "1px solid #2d3748",
+                                        padding: "10px",
+                                        textAlign: "center",
+                                        transition: "border-color 0.15s"
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.borderColor = stat.color}
                                     onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}
                                 >
-                                    <div style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        gap: "8px"
-                                    }}>
-                                        <div style={{ flex: 1 }}>
-                                            <p style={{
-                                                margin: "0 0 2px 0",
-                                                color: "#94a3b8",
-                                                fontSize: "11px",
-                                                fontWeight: "500"
-                                            }}>{stat.label}</p>
-                                            <h2 style={{
-                                                margin: 0,
-                                                fontSize: "22px",
-                                                color: "#ffffff",
-                                                fontWeight: "600"
-                                            }}>
-                                                {stat.value}
-                                            </h2>
-                                        </div>
-                                        <stat.icon style={{
-                                            fontSize: "22px",
-                                            color: stat.color,
-                                            opacity: 0.6
-                                        }} />
-                                    </div>
+                                    <p style={{ color: "#ffffff", fontSize: "20px", fontWeight: "600", margin: 0 }}>{stat.value}</p>
+                                    <p style={{ color: "#94a3b8", fontSize: "11px", fontWeight: "500", margin: 0 }}>{stat.label}</p>
                                 </div>
                             ))}
                         </div>
-                    </>
+                    </div>
                 )}
 
-                {/* ===== MANAGEMENT SECTION (ONLY ADMIN) ===== */}
-                {user?.role === "admin" && (
-                    <>
-                        <div style={styles.sectionTitle}>⚙️ Management</div>
-                        <div style={styles.card}>
-                            <div style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                                gap: "10px"
-                            }}>
-                                <Link to="/create-subject" style={{
-                                    textDecoration: "none",
-                                    background: "#0f172a",
-                                    padding: "12px",
-                                    borderRadius: "8px",
-                                    border: "1px solid #2d3748",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    transition: "border-color 0.15s"
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
-                                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                                    <FaBook style={{ color: "#a78bfa", fontSize: "16px" }} />
-                                    <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Manage Subjects</span>
-                                </Link>
-                                <Link to="/create-folder" style={{
-                                    textDecoration: "none",
-                                    background: "#0f172a",
-                                    padding: "12px",
-                                    borderRadius: "8px",
-                                    border: "1px solid #2d3748",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    transition: "border-color 0.15s"
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
-                                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                                    <FaFolder style={{ color: "#a78bfa", fontSize: "16px" }} />
-                                    <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>Manage Folders</span>
-                                </Link>
-                                <Link to="/users" style={{
-                                    textDecoration: "none",
-                                    background: "#0f172a",
-                                    padding: "12px",
-                                    borderRadius: "8px",
-                                    border: "1px solid #2d3748",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    transition: "border-color 0.15s"
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f472b6"}
-                                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
-                                    <FaUsers style={{ color: "#f472b6", fontSize: "16px" }} />
-                                    <span style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: "500" }}>User Management</span>
-                                </Link>
-                            </div>
+                {/* ===== 9. MANAGEMENT (ADMIN + MODERATOR ONLY) ===== */}
+                {isAdminTeam && (
+                    <div style={styles.card}>
+                        <h2 style={styles.cardTitle}>⚙️ Management</h2>
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                            gap: "10px"
+                        }}>
+                            <Link to="/create-subject" style={{
+                                textDecoration: "none",
+                                background: "#0f172a",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #2d3748",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "border-color 0.15s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                                <FaPlus style={{ color: "#a78bfa", fontSize: "14px" }} />
+                                <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Manage Subjects</span>
+                            </Link>
+                            <Link to="/manage-folders" style={{
+                                textDecoration: "none",
+                                background: "#0f172a",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #2d3748",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "border-color 0.15s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                                <FaFolder style={{ color: "#a78bfa", fontSize: "14px" }} />
+                                <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Manage Folders</span>
+                            </Link>
+                            <Link to="/users" style={{
+                                textDecoration: "none",
+                                background: "#0f172a",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #2d3748",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "border-color 0.15s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f472b6"}
+                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                                <FaUsers style={{ color: "#f472b6", fontSize: "14px" }} />
+                                <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>User Management</span>
+                            </Link>
+                            <Link to="/create-announcement" style={{
+                                textDecoration: "none",
+                                background: "#0f172a",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #2d3748",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "border-color 0.15s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#f59e0b"}
+                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                                <FaPlus style={{ color: "#f59e0b", fontSize: "14px" }} />
+                                <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Create Announcement</span>
+                            </Link>
+                            <Link to="/create-assignment" style={{
+                                textDecoration: "none",
+                                background: "#0f172a",
+                                padding: "10px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #2d3748",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "border-color 0.15s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.borderColor = "#a78bfa"}
+                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#2d3748"}>
+                                <FaPlus style={{ color: "#a78bfa", fontSize: "14px" }} />
+                                <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: "500" }}>Create Assignment</span>
+                            </Link>
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
 
             <style>
                 {`
-                    ::-webkit-scrollbar {
-                        width: 6px;
-                    }
-                    
-                    ::-webkit-scrollbar-track {
-                        background: #1a1f3a;
-                        border-radius: 8px;
-                    }
-                    
-                    ::-webkit-scrollbar-thumb {
-                        background: #667eea;
-                        border-radius: 8px;
-                    }
-                    
-                    ::-webkit-scrollbar-thumb:hover {
-                        background: #764ba2;
-                    }
-                    
-                    @media (max-width: 768px) {
-                        a, button, [role="button"] {
-                            touch-action: manipulation;
+                    @media (max-width: 900px) {
+                        div[style*="grid-template-columns: 1fr 1fr"] {
+                            grid-template-columns: 1fr !important;
                         }
                     }
-                    
+                    @media (max-width: 768px) {
+                        div[style*="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))"] {
+                            grid-template-columns: repeat(2, 1fr) !important;
+                        }
+                    }
                     @media (max-width: 480px) {
-                        div[style*="grid-template-columns"] {
+                        div[style*="grid-template-columns: repeat(2, 1fr)"] {
                             grid-template-columns: 1fr !important;
+                        }
+                        div[style*="padding: 16px 18px"] {
+                            padding: 12px 14px !important;
+                        }
+                        div[style*="padding: 16px"] {
+                            padding: 14px !important;
                         }
                     }
                 `}

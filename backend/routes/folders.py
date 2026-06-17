@@ -153,3 +153,76 @@ def delete_folder(folder_id):
     return jsonify({
         "message": "Folder deleted"
     })
+
+@folders_bp.route("/all", methods=["GET"])
+@jwt_required()
+def get_all_folders():
+
+    user_id = get_jwt_identity()
+
+    user = User.query.get(user_id)
+
+    if user.role not in ["admin", "moderator"]:
+        return jsonify({
+            "error": "Access denied"
+        }), 403
+
+    folders = Folder.query.filter_by(
+        is_deleted=False
+    ).all()
+
+    users = {
+        user.id: user
+        for user in User.query.all()
+    }
+
+    from models.subject import Subject
+
+    subjects = {
+        subject.id: subject
+        for subject in Subject.query.all()
+    }
+
+    folder_lookup = {
+        folder.id: folder
+        for folder in folders
+    }
+
+    return jsonify([
+        {
+    "id": folder.id,
+    "folder_name": folder.folder_name,
+
+    "subject_id": folder.subject_id,
+    "subject_name": (
+        subjects.get(folder.subject_id).name
+        if subjects.get(folder.subject_id)
+        else None
+    ),
+
+    "parent_folder_id": folder.parent_folder_id,
+    "parent_folder_name": (
+        folder_lookup.get(
+            folder.parent_folder_id
+        ).folder_name
+        if folder.parent_folder_id
+        and folder_lookup.get(
+            folder.parent_folder_id
+        )
+        else None
+    ),
+
+    "created_by": folder.created_by,
+    "created_by_name": (
+        users.get(folder.created_by).name
+        if users.get(folder.created_by)
+        else "Unknown"
+    ),
+
+    "file_count": File.query.filter_by(
+        folder_id=folder.id,
+        is_deleted=False
+    ).count()
+}
+        for folder in folders
+    ])

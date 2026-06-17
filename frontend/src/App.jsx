@@ -7,7 +7,7 @@ import FolderView from "./pages/FolderView";
 import Announcements from "./pages/Announcements";
 import CreateAnnouncement from "./pages/CreateAnnouncement";
 import CreateSubject from "./pages/CreateSubject";
-import CreateFolder from "./pages/CreateFolder";
+import ManageFolders from "./pages/ManageFolders";
 import UploadFile from "./pages/UploadFile";
 import Users from "./pages/Users";
 import CreateAssignment from "./pages/CreateAssignment";
@@ -64,8 +64,8 @@ function App() {
         />
 
         <Route
-          path="/create-folder"
-          element={<CreateFolder />}
+          path="/manage-folders"
+          element={<ManageFolders />}
         />
 
         <Route
