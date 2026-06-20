@@ -68,7 +68,7 @@ function Navbar() {
           <div style={{ display: "flex", gap: "2px", alignItems: "center" }} className="desktop-nav">
             <Link to="/dashboard" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Dashboard</Link>
             <Link to="/subjects" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Subjects</Link>
-            <Link to="/assignments" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Assignments</Link>
+            <Link to="/create-assignment" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Create Assignment</Link>
             <Link to="/timetable" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Timetable</Link>
             <Link to="/announcements" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Announcements</Link>
             <Link to="/users" style={linkStyle} onMouseEnter={(e) => Object.assign(e.target.style, linkHover)} onMouseLeave={(e) => Object.assign(e.target.style, { borderColor: "transparent" })}>Class Directory</Link>
@@ -179,7 +179,7 @@ function Navbar() {
         }}>
           <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Dashboard</Link>
           <Link to="/subjects" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Subjects</Link>
-          <Link to="/assignments" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Assignments</Link>
+          <Link to="/create-assignment" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Create Assignment</Link>
           <Link to="/timetable" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Timetable</Link>
           <Link to="/announcements" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Announcements</Link>
           <Link to="/users" onClick={() => setMobileMenuOpen(false)} style={linkStyle}>Class Directory</Link>
